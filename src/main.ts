@@ -44,7 +44,11 @@ ipcMain.on('onboarding-complete', () => {
   console.log('onboarding complete. creating browser view...');
   if (!mainWindow) return;
 
-  view = new BrowserView();
+  view = new BrowserView({
+    webPreferences: {
+      partition: 'persist:rizzly-session',
+    },
+  });
   mainWindow.setBrowserView(view);
 
   const resizeView = () => {
