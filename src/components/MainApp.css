@@ -62,4 +62,44 @@ h1 {
 
 .input-group button:hover {
     background-color: #166fe5;
+}
+
+.full-width-btn {
+    width: 100%;
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    border-radius: 6px;
+    border: 1px solid #1877f2;
+    background-color: #1877f2;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.full-width-btn:hover {
+    background-color: #166fe5;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 1rem;
+}
+
+.button-group button {
+    flex-grow: 1;
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+    border-radius: 6px;
+    border: 1px solid #1877f2;
+    background-color: #1877f2;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.button-group button:hover {
+    background-color: #166fe5;
 } 

@@ -6,5 +6,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('electronAPI', {
   onboardingComplete: () => ipcRenderer.send('onboarding-complete'),
   navigateTo: (url: string) => ipcRenderer.send('navigate-to', url),
-  findAndHighlight: (selector: string) => ipcRenderer.send('find-and-highlight', selector),
+  logCurrentImageUrl: () => ipcRenderer.send('log-current-image-url'),
+  clickNextPhoto: (selector: string) => ipcRenderer.send('click-next-photo', selector),
+  downloadAllImages: () => ipcRenderer.send('download-all-images'),
 });

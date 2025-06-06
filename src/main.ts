@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain, BrowserView } from 'electron';
+import { app, BrowserWindow, ipcMain, BrowserView, session } from 'electron';
+import path from 'path';
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
 declare const MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY: string;
@@ -14,6 +15,10 @@ const createWindow = (): void => {
   mainWindow = new BrowserWindow({
     height: 800,
     width: 1200,
+    titleBarStyle: 'hidden',
+    frame: false,
+    transparent: true,
+    backgroundColor: 'rgba(0,0,0,0)',
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
       nodeIntegration: false,
@@ -23,7 +28,7 @@ const createWindow = (): void => {
 
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
 
-  mainWindow.webContents.openDevTools({ mode: 'detach' });
+  // mainWindow.webContents.openDevTools({ mode: 'detach' });
 };
 
 app.on('ready', createWindow);
@@ -41,7 +46,7 @@ app.on('activate', () => {
 });
 
 ipcMain.on('onboarding-complete', () => {
-  console.log('onboarding complete. creating browser view...');
+  console.log('onboarding done, creating browser view');
   if (!mainWindow) return;
 
   view = new BrowserView({
@@ -53,7 +58,7 @@ ipcMain.on('onboarding-complete', () => {
 
   const resizeView = () => {
     const [width, height] = mainWindow.getSize();
-    const controlPanelHeight = 180;
+    const controlPanelHeight = 240;
     if (view) {
       view.setBounds({ x: 0, y: controlPanelHeight, width, height: height - controlPanelHeight });
     }
@@ -63,40 +68,280 @@ ipcMain.on('onboarding-complete', () => {
   mainWindow.on('resize', resizeView);
 
   view.webContents.loadURL('https://tinder.com/app/recs');
-  view.webContents.openDevTools({ mode: 'detach' });
+  // view.webContents.openDevTools({ mode: 'detach' });
+
+  // handle file downloads
+  view.webContents.session.on('will-download', (event, item, webContents) => {
+    // let's save to the user's downloads folder
+    const downloadsPath = app.getPath('downloads');
+    const fileName = item.getFilename();
+    const savePath = path.join(downloadsPath, fileName);
+    item.setSavePath(savePath);
+
+    item.on('updated', (event, state) => {
+      if (state === 'interrupted') {
+        console.log('download is interrupted but can be resumed');
+      } else if (state === 'progressing') {
+        if (item.isPaused()) {
+          console.log('download is paused');
+        } else {
+          const received = item.getReceivedBytes();
+          const total = item.getTotalBytes();
+          if (total > 0) {
+            console.log(`> ${Math.round((received / total) * 100)}%`);
+          }
+        }
+      }
+    });
+
+    item.once('done', (event, state) => {
+      if (state === 'completed') {
+        console.log(`download finished: ${fileName}`);
+      } else {
+        console.log(`download failed: ${state}`);
+      }
+    });
+  });
 });
 
 ipcMain.on('navigate-to', (event, url) => {
   if (view && url) {
-    console.log(`navigating view to: ${url}`);
+    console.log(`navigating to: ${url}`);
     view.webContents.loadURL(url);
   }
 });
 
-ipcMain.on('find-and-highlight', (event, selector) => {
-  if (view && selector) {
-    console.log(`executing highlight script for selector: ${selector}`);
+ipcMain.on('log-current-image-url', (event) => {
+  if (view) {
+    console.log('---');
+    console.log(`getting current image url...`);
     const script = `
       (() => {
-        // test highlight script for now
-        const prevHighlight = document.querySelector('.rizzly-highlight');
-        if (prevHighlight) {
-          prevHighlight.style.outline = '';
-          prevHighlight.classList.remove('rizzly-highlight');
+        const logs = [];
+        logs.push('--- finding profile and image ---');
+    
+        const profileContainers = document.querySelectorAll('section[aria-roledescription="carousel"]');
+        logs.push(\`found \${profileContainers.length} profile containers\`);
+    
+        let candidateContainers = [];
+        for (const container of profileContainers) {
+            const hasActiveTab = container.querySelector('button[role="tab"][aria-selected="true"]');
+            const rect = container.getBoundingClientRect();
+            // a container is a candidate if it has an active tab and is positioned on-screen.
+            if (hasActiveTab && rect.top >= 0) {
+                candidateContainers.push(container);
+            }
         }
-        const element = document.querySelector('${selector}');
-        if (element) {
-          element.classList.add('rizzly-highlight');
-          element.style.outline = '3px solid #f25a44';
-          element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          return 'success: element highlighted';
+    
+        logs.push(\`found \${candidateContainers.length} candidates (on-screen w/ active tab).\`);
+    
+        // if multiple candidates exist, the last one in the dom is the one on top.
+        const currentProfileContainer = candidateContainers.length > 0 ? candidateContainers[candidateContainers.length - 1] : null;
+    
+        if (currentProfileContainer) {
+            logs.push('selected profile: ' + currentProfileContainer.getAttribute('aria-label'));
+            const allDots = currentProfileContainer.querySelectorAll('button[role="tab"]');
+            const activeDot = currentProfileContainer.querySelector('button[role="tab"][aria-selected="true"]');
+            const activeIndex = Array.from(allDots).indexOf(activeDot);
+    
+            logs.push(\`active photo index: \${activeIndex}\`);
+    
+            const slides = currentProfileContainer.querySelectorAll('.keen-slider__slide');
+            logs.push(\`found \${slides.length} slides in this profile\`);
+    
+            if (slides.length > activeIndex && activeIndex > -1) {
+                const activeSlide = slides[activeIndex];
+                const imageDiv = activeSlide.querySelector('div[aria-label^="Profile Photo"]');
+                
+                if (imageDiv) {
+                    const style = window.getComputedStyle(imageDiv);
+                    const bgImage = style.backgroundImage;
+                    if (bgImage && bgImage.startsWith('url("')) {
+                        const url = bgImage.slice(5, -2);
+                        logs.push('success: ' + url);
+                    } else {
+                        logs.push('err: found image div, but no valid bg image url');
+                    }
+                } else {
+                    logs.push('err: couldnt find image div in active slide');
+                }
+            } else {
+                logs.push(\`err: slide index (\${activeIndex}) is out of bounds (\${slides.length} slides found)\`);
+            }
+    
         } else {
-          return 'error: element not found';
+            logs.push('err: couldnt find a suitable profile container');
         }
+    
+        return logs;
       })();
     `;
     view.webContents.executeJavaScript(script)
-      .then(result => console.log('script result:', result))
-      .catch(err => console.error('script execution failed:', err));
+      .then(logs => {
+        logs.forEach((log: string) => console.log(log));
+      })
+      .catch(err => console.error('Script execution failed:', err));
   }
+});
+
+ipcMain.on('click-next-photo', (event, selector) => {
+  if (view && selector) {
+    console.log('---');
+    console.log(`clicking next photo...`);
+    const script = `
+      (() => {
+        const logs = [];
+        logs.push('--- finding and clicking next photo ---');
+
+        const profileContainers = document.querySelectorAll('section[aria-roledescription="carousel"]');
+        let candidateContainers = [];
+        for (const container of profileContainers) {
+            const rect = container.getBoundingClientRect();
+            if (rect.top >= 0) {
+                candidateContainers.push(container);
+            }
+        }
+        
+        const currentProfileContainer = candidateContainers.length > 0 ? candidateContainers[candidateContainers.length - 1] : null;
+
+        if (currentProfileContainer) {
+          logs.push('found current profile: ' + currentProfileContainer.getAttribute('aria-label'));
+          const targetButton = currentProfileContainer.querySelector('${selector}');
+          
+          if (targetButton && !targetButton.disabled) {
+            logs.push('success: found clickable "next photo" button in current profile');
+            const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
+            const mousedownEvent = new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window });
+            targetButton.dispatchEvent(mousedownEvent);
+            targetButton.dispatchEvent(clickEvent);
+            logs.push('dispatched mousedown and click events');
+          } else if (targetButton) {
+            logs.push('err: button found but disabled');
+          } else {
+            logs.push('err: couldnt find any button w/ selector in current profile');
+          }
+
+        } else {
+          logs.push('err: couldnt find current profile container');
+        }
+
+        return logs;
+      })();
+    `;
+    view.webContents.executeJavaScript(script)
+      .then(logs => {
+        logs.forEach((log: string) => console.log(log));
+      })
+      .catch(err => console.error('Script execution failed:', err));
+  }
+});
+
+ipcMain.on('download-all-images', async () => {
+  if (!view) return;
+
+  console.log('---');
+  console.log('starting download of all images for this profile...');
+
+  const downloadedUrls = new Set<string>();
+  const MAX_IMAGES_PER_PROFILE = 20; // safe limit to prevent infinite loops
+
+  for (let i = 0; i < MAX_IMAGES_PER_PROFILE; i++) {
+    console.log(`\n> iteration ${i + 1}:`);
+    try {
+      // step 1: get current image url and check if the 'next' button is disabled.
+      const stateResult: { url?: string; isEnd?: boolean; error?: string } = await view.webContents.executeJavaScript(`
+        (() => {
+          const getOnscreenProfile = () => {
+            const profileContainers = document.querySelectorAll('section[aria-roledescription="carousel"]');
+            const candidates = Array.from(profileContainers).filter(c => c.getBoundingClientRect().top >= 0);
+            return candidates.length > 0 ? candidates[candidates.length - 1] : null;
+          };
+
+          const container = getOnscreenProfile();
+          if (!container) return { error: 'could not find current profile container' };
+
+          const getImageUrl = () => {
+            const allDots = container.querySelectorAll('button[role="tab"]');
+            const activeDot = container.querySelector('button[role="tab"][aria-selected="true"]');
+            if (!activeDot) return null;
+            const activeIndex = Array.from(allDots).indexOf(activeDot);
+
+            const slides = container.querySelectorAll('.keen-slider__slide');
+            if (slides.length <= activeIndex || activeIndex < 0) return null;
+
+            const activeSlide = slides[activeIndex];
+            const imageDiv = activeSlide.querySelector('div[aria-label^="Profile Photo"]');
+            if (!imageDiv) return null;
+
+            const style = window.getComputedStyle(imageDiv);
+            const bgImage = style.backgroundImage;
+            if (bgImage && bgImage.startsWith('url("')) {
+                return bgImage.slice(5, -2);
+            }
+            return null;
+          };
+          
+          const url = getImageUrl();
+          const nextButton = container.querySelector('button[aria-label="Next Photo"]');
+          const isEnd = !nextButton || nextButton.disabled;
+
+          return { url, isEnd };
+        })();
+      `);
+
+      if (stateResult.error) {
+        console.error('script error:', stateResult.error);
+        break;
+      }
+
+      // step 2: download the image if it's new.
+      if (stateResult.url && !downloadedUrls.has(stateResult.url)) {
+        console.log(`found new image, downloading...`);
+        downloadedUrls.add(stateResult.url);
+        view.webContents.downloadURL(stateResult.url);
+      } else if (stateResult.url) {
+        console.log('image already downloaded, skipping');
+      } else {
+        console.log('could not find image url for this slide');
+      }
+
+      // step 3: if it's the last image, break the loop.
+      if (stateResult.isEnd) {
+        console.log('next button disabled, must be the last image');
+        break;
+      }
+
+      // step 4: click the 'next photo' button.
+      console.log('clicking next photo...');
+      await view.webContents.executeJavaScript(`
+        (() => {
+          const getOnscreenProfile = () => {
+            const profileContainers = document.querySelectorAll('section[aria-roledescription="carousel"]');
+            const candidates = Array.from(profileContainers).filter(c => c.getBoundingClientRect().top >= 0);
+            return candidates.length > 0 ? candidates[candidates.length - 1] : null;
+          };
+          const container = getOnscreenProfile();
+          if (!container) return;
+          
+          const nextButton = container.querySelector('button[aria-label="Next Photo"]');
+          if (nextButton && !nextButton.disabled) {
+            const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
+            const mousedownEvent = new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window });
+            nextButton.dispatchEvent(mousedownEvent);
+            nextButton.dispatchEvent(clickEvent);
+          }
+        })();
+      `);
+
+      // step 5: wait for the ui to update.
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+    } catch (err) {
+      console.error('error in download loop:', err);
+      break;
+    }
+  }
+
+  console.log(`---`);
+  console.log(`finished profile. total unique images: ${downloadedUrls.size}`);
 });

@@ -1,7 +1,9 @@
 export interface IElectronAPI {
   onboardingComplete: () => void;
   navigateTo: (url: string) => void;
-  findAndHighlight: (selector: string) => void;
+  logCurrentImageUrl: () => void;
+  clickNextPhoto: (selector: string) => void;
+  downloadAllImages: () => void;
 }
 
 declare global {
