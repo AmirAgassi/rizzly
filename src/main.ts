@@ -62,7 +62,7 @@ ipcMain.on('onboarding-complete', () => {
   resizeView();
   mainWindow.on('resize', resizeView);
 
-  view.webContents.loadURL('https://google.com');
+  view.webContents.loadURL('https://tinder.com/app/recs');
   view.webContents.openDevTools({ mode: 'detach' });
 });
 
