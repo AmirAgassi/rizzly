@@ -1,0 +1,158 @@
+.onboarding-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: linear-gradient(45deg, #6d80fe, #2946c2);
+  padding: 2rem;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+.onboarding-card {
+  background: #fff;
+  padding: 2.5rem;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  max-width: 550px;
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 8px;
+  background-color: #e4e6eb;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 2.5rem;
+}
+
+.progress-bar {
+  height: 100%;
+  background-color: #1877f2;
+  border-radius: 4px;
+  transition: width 0.4s ease-in-out;
+}
+
+.onboarding-card h2 {
+  font-size: 1.75rem;
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+  color: #1c1e21;
+}
+
+.onboarding-options {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+  text-align: left;
+}
+
+.onboarding-options label {
+  display: block;
+  padding: 1rem;
+  border: 2px solid #dddfe2;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-weight: 500;
+}
+
+.onboarding-options label:hover {
+  border-color: #1877f2;
+  transform: translateY(-2px);
+}
+
+.onboarding-options label:active {
+  transform: scale(0.98);
+  background-color: #e7f3ff;
+}
+
+/* Hide the default radio button accessibly */
+.onboarding-options input[type="radio"] {
+  opacity: 0;
+  position: absolute;
+  width: 1px;
+  height: 1px;
+}
+
+/* Style the label when the radio is checked */
+.onboarding-options label:has(input[type="radio"]:checked) {
+  border-color: #1877f2;
+  background-color: #f0f8ff;
+  box-shadow: 0 4px 8px rgba(24, 119, 242, 0.1);
+}
+
+.navigation-buttons {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  padding-top: 1rem;
+  border-top: 1px solid #e4e6eb;
+}
+
+.navigation-buttons button {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  border-radius: 8px;
+  border: none;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.navigation-buttons button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.navigation-buttons button:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+}
+
+.next-button {
+  background-color: #1877f2;
+  color: white;
+}
+
+.back-button {
+  background-color: transparent;
+  color: #4b4f56;
+}
+
+.back-button:hover {
+  background-color: #f0f2f5;
+}
+
+/* Styles for Page 3 Text Inputs */
+.text-input-group {
+  width: 100%;
+}
+
+.text-input-group label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #606770;
+  margin-bottom: 0.5rem;
+}
+
+.text-input-group input {
+  width: 100%;
+  padding: 0.75rem;
+  border: 2px solid #dddfe2;
+  border-radius: 6px;
+  font-size: 1rem;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.text-input-group input:focus {
+  outline: none;
+  border-color: #1877f2;
+} 
