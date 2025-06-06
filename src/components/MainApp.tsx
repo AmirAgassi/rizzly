@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import './MainApp.css';
 
 function MainApp() {
-  const [url, setUrl] = useState('https://www.google.com'); // test site for now
+  const [url, setUrl] = useState('https://tinder.com/app/recs');
   const [selector, setSelector] = useState('textarea[name="q"], input[name="q"]');
 
   const handleNavigate = (e: React.FormEvent) => {
