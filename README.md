@@ -36,6 +36,8 @@ rizzly learns your dating preferences through onboarding - your goals, communica
 
 **emergency intervention** prevents you from sending potentially problematic messages, acting as a safety net for your conversations.
 
+from your swipes, to your dms, rizzly is here to help.
+
 ### **get started**
 
 ```bash
