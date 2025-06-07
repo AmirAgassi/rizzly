@@ -25,7 +25,7 @@ function MainApp() {
   const [chatHistory, setChatHistory] = useState([
     {
       type: 'mascot',
-      message: 'hey there! i\'m your dating copilot. ready to level up your game? ☕',
+      message: 'heyo',
       timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
       bufoFace: 'bufo-tea'
     }
