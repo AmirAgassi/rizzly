@@ -3,6 +3,16 @@ export interface AIResponse {
   message: string;
   emotion: string;
   confidence: number;
+  toolCall?: {
+    name: string;
+    reason: string;
+  };
+}
+
+export interface ProfileAnalysisRequest {
+  images: string[]; // base64 encoded images
+  userMessage: string;
+  onboardingData: any;
 }
 
 export class AIService {
@@ -20,7 +30,16 @@ export class AIService {
 IMPORTANT: Your responses must be in this exact JSON format:
 {
   "message": "your actual response here (keep it casual, lowercase, helpful)",
-  "emotion": "one of: happy, excited, confident, thinking, analyzing, surprised, confused, disappointed, supportive, encouraging, flirty, romantic, chill, casual"
+  "emotion": "one of: happy, excited, confident, thinking, analyzing, surprised, confused, disappointed, supportive, encouraging, flirty, romantic, chill, casual",
+  "toolCall": "OPTIONAL - only if user wants profile analysis"
+}
+
+TOOL CALLS: If the user asks to analyze someone's profile, photos, or asks questions like "do I have a shot?", "thoughts about her/him?", "what's she like?", "should I swipe right?", etc., include:
+{
+  "toolCall": {
+    "name": "analyze_profile",
+    "reason": "user wants profile analysis"
+  }
 }
 
 Guidelines:
@@ -31,6 +50,7 @@ Guidelines:
 - Be empathetic and understanding
 - Choose the emotion that best matches your response tone
 - Keep responses concise but helpful (1-3 sentences max)
+- When tool calls are needed, tell user you're going to analyze their photos
 
 Remember: You're a fun, supportive dating wingman, not a formal assistant!`;
   }
@@ -85,7 +105,8 @@ Remember: You're a fun, supportive dating wingman, not a formal assistant!`;
         return {
           message: parsed.message || aiMessage,
           emotion: parsed.emotion || 'casual',
-          confidence: 0.8
+          confidence: 0.8,
+          toolCall: parsed.toolCall
         };
       } catch (parseError) {
         // if json parsing fails, check if response contains json-like pattern
@@ -93,10 +114,21 @@ Remember: You're a fun, supportive dating wingman, not a formal assistant!`;
         const emotionMatch = aiMessage.match(/"emotion":\s*"([^"]+)"/);
         
         if (messageMatch && emotionMatch) {
+          // check for tool call in the raw message
+          const toolCallMatch = aiMessage.match(/"toolCall":\s*\{[^}]+\}/);
+          let toolCall = undefined;
+          if (toolCallMatch) {
+            try {
+              const toolCallObj = JSON.parse(toolCallMatch[0].replace('"toolCall":', ''));
+              toolCall = toolCallObj;
+            } catch (e) {}
+          }
+          
           return {
             message: messageMatch[1],
             emotion: emotionMatch[1],
-            confidence: 0.7
+            confidence: 0.7,
+            toolCall
           };
         }
         
@@ -120,6 +152,202 @@ Remember: You're a fun, supportive dating wingman, not a formal assistant!`;
       ];
       
       return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+    }
+  }
+
+  // analyze profile with images and user context
+  async analyzeProfile(request: ProfileAnalysisRequest): Promise<AIResponse> {
+    try {
+      const analysisPrompt = `You are a witty, helpful dating copilot analyzing a dating profile. Here's the user's context:
+
+User's dating goals: ${request.onboardingData?.primaryGoal || 'not specified'}
+Communication style: ${request.onboardingData?.communicationStyle?.join(', ') || 'not specified'}
+Interests: ${request.onboardingData?.conversationTopics?.join(', ') || 'not specified'}
+
+User asked: "${request.userMessage}"
+
+Based on the profile photos, give a quick 2-3 sentence take. Write entirely in lowercase and be casual, honest, and helpful - like texting a friend. Keep the same chill, supportive tone as your other responses. Focus on whether they seem compatible and one good conversation starter.`;
+
+      // only use the last 5 images to avoid token limits
+      const imagesToAnalyze = request.images.slice(-5);
+      console.log(`Using ${imagesToAnalyze.length} of ${request.images.length} images for analysis`);
+      
+      const messages = [
+        { role: 'system', content: analysisPrompt },
+        { 
+          role: 'user', 
+          content: [
+            { type: 'text', text: request.userMessage },
+            ...imagesToAnalyze.map(img => ({
+              type: 'image_url',
+              image_url: { url: `data:image/jpeg;base64,${img}` }
+            }))
+          ]
+        }
+      ];
+
+      console.log('Starting simple profile analysis:', {
+        model: 'Llama-4-Maverick-17B-128E-Instruct',
+        userMessage: request.userMessage,
+        imageCount: request.images.length
+      });
+
+      // simple non-streaming request
+      const response = await fetch(this.baseUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'Llama-4-Maverick-17B-128E-Instruct',
+          messages,
+          temperature: 0.7,
+          max_tokens: 150,
+          stream: false
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Analysis API Error:', {
+          status: response.status,
+          statusText: response.statusText,
+          body: errorText
+        });
+        throw new Error(`analysis api error: ${response.status} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      console.log('API Response structure:', JSON.stringify(data, null, 2));
+      
+      const aiMessage = data.choices?.[0]?.message?.content;
+      console.log('Extracted message:', aiMessage);
+
+      if (!aiMessage) {
+        console.log('No message found in response. Full data:', data);
+        throw new Error('no response from analysis');
+      }
+
+      console.log('Analysis complete, message length:', aiMessage.length);
+      
+      // get emotion for this analysis
+      const emotion = await this.getEmotionForAnalysis(messages);
+      console.log('Emotion detected:', emotion);
+      
+      return {
+        message: aiMessage,
+        emotion: emotion,
+        confidence: 0.8
+      };
+
+    } catch (error) {
+      console.error('profile analysis error:', error);
+      return {
+        message: "couldn't analyze the profile right now, but from what i can see, go with your gut! 😉",
+        emotion: "casual",
+        confidence: 0.3
+      };
+    }
+  }
+
+  private async getEmotionForAnalysis(messages: any[]): Promise<string> {
+    try {
+      // Simple emotion detection request (non-streaming, JSON)
+      const emotionPrompt = `Based on the dating profile analysis you just provided, what emotion should the dating copilot mascot display? 
+
+Respond with just one word from these options: happy, excited, confident, thinking, analyzing, surprised, confused, disappointed, supportive, encouraging, flirty, romantic, chill, casual`;
+
+      const emotionMessages = [
+        { role: 'system', content: emotionPrompt },
+        messages[1] // same user message with images
+      ];
+
+      const response = await fetch(this.baseUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'Llama-4-Maverick-17B-128E-Instruct',
+          messages: emotionMessages,
+          temperature: 0.3,
+          max_tokens: 10,
+          stream: false
+        })
+      });
+
+      if (!response.ok) {
+        console.warn('Emotion detection failed, using default');
+        return 'analyzing';
+      }
+
+      const data = await response.json();
+      const emotion = data.choices?.[0]?.message?.content?.trim().toLowerCase();
+      
+      // validate emotion is in our list
+      const validEmotions = ['happy', 'excited', 'confident', 'thinking', 'analyzing', 'surprised', 'confused', 'disappointed', 'supportive', 'encouraging', 'flirty', 'romantic', 'chill', 'casual'];
+      
+      return validEmotions.includes(emotion) ? emotion : 'analyzing';
+      
+    } catch (error) {
+      console.warn('Emotion detection error:', error);
+      return 'analyzing';
+    }
+  }
+
+
+
+  private async nonStreamingAnalysis(messages: any[], request: ProfileAnalysisRequest): Promise<AIResponse> {
+    console.log('Trying non-streaming analysis...');
+    
+    const response = await fetch(this.baseUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'Llama-4-Maverick-17B-128E-Instruct',
+        messages,
+        temperature: 0.7,
+        max_tokens: 500,
+        stream: false
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Non-streaming API Error:', {
+        status: response.status,
+        statusText: response.statusText,
+        body: errorText
+      });
+      throw new Error(`non-streaming api error: ${response.status} - ${errorText}`);
+    }
+
+    const data = await response.json();
+    const aiMessage = data.choices?.[0]?.message?.content;
+
+    if (!aiMessage) {
+      throw new Error('no non-streaming response from ai');
+    }
+
+    // try to parse as JSON, fallback to raw message
+    try {
+      const parsed = JSON.parse(aiMessage);
+      return {
+        message: parsed.message || aiMessage,
+        emotion: parsed.emotion || 'analyzing',
+        confidence: 0.9
+      };
+    } catch (parseError) {
+      return {
+        message: aiMessage,
+        emotion: 'analyzing',
+        confidence: 0.7
+      };
     }
   }
 

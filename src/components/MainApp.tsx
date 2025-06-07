@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import './MainApp.css';
 import { bufoManager } from './BufoManager';
+import PhotoStack from './PhotoStack';
 // fallback mascot
 import bufoTea from '../bufopack/bufo-tea.png';
 
@@ -14,6 +15,12 @@ function MainApp() {
   const [apiKey, setApiKey] = useState(localStorage.getItem('sambanova-api-key') || '');
   const [isAIConnected, setIsAIConnected] = useState(false);
   const [isTyping, setIsTyping] = useState(false);
+  const [downloadingPhotos, setDownloadingPhotos] = useState(false);
+  const [currentPhotos, setCurrentPhotos] = useState<string[]>([]);
+  const [onboardingData, setOnboardingData] = useState(() => {
+    const saved = localStorage.getItem('rizzly-preferences');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [chatHistory, setChatHistory] = useState([
     {
       type: 'mascot',
@@ -43,6 +50,44 @@ function MainApp() {
       };
       checkAI();
     }
+
+    // set up download progress listener
+    const removeProgressListener = window.electronAPI.onDownloadProgress((data) => {
+      console.log('Renderer: Download progress:', { 
+        imageCount: data.imageCount, 
+        hasImage: !!data.imageBase64,
+        isComplete: data.isComplete 
+      });
+      
+      if (data.isComplete) {
+        console.log('Renderer: Download complete');
+        setDownloadingPhotos(false);
+      } else if (data.imageBase64) {
+        console.log('Renderer: Adding new image to latest stack');
+        // update the latest message with hasPhotoStack
+        setChatHistory(prev => {
+          const updated = [...prev];
+          // find the most recent message with hasPhotoStack
+          for (let i = updated.length - 1; i >= 0; i--) {
+            if ((updated[i] as any).hasPhotoStack) {
+              const currentPhotos = (updated[i] as any).photos || [];
+              if (!currentPhotos.includes(data.imageBase64)) {
+                (updated[i] as any).photos = [...currentPhotos, data.imageBase64];
+                console.log(`Renderer: Stack now has ${(updated[i] as any).photos.length} images`);
+              }
+              break;
+            }
+          }
+          return updated;
+        });
+      }
+    });
+
+
+
+    return () => {
+      removeProgressListener();
+    };
   }, []);
 
   // handle api key changes
@@ -85,9 +130,43 @@ function MainApp() {
 
   // auto-scroll to bottom when new messages are added
   useEffect(() => {
-    if (chatMessagesRef.current) {
-      chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
-    }
+    const scrollToBottom = () => {
+      if (chatMessagesRef.current) {
+        const container = chatMessagesRef.current;
+        console.log('🔥 SCROLL DEBUG:', {
+          scrollHeight: container.scrollHeight,
+          clientHeight: container.clientHeight,
+          scrollTop: container.scrollTop,
+          hasRef: !!chatMessagesRef.current,
+          className: container.className
+        });
+        
+        // force scroll to absolute bottom
+        container.scrollTop = container.scrollHeight + 1000;
+        
+        console.log('🔥 AFTER SCROLL:', {
+          newScrollTop: container.scrollTop
+        });
+      } else {
+        console.log('🔥 NO CHAT REF!');
+      }
+    };
+
+    console.log('🔥 SCROLL EFFECT TRIGGERED, chat history length:', chatHistory.length);
+
+    // immediate scroll
+    scrollToBottom();
+    
+    // multiple delayed scrolls to catch any late-rendering content
+    const timeoutId1 = setTimeout(scrollToBottom, 50);
+    const timeoutId2 = setTimeout(scrollToBottom, 200);
+    const timeoutId3 = setTimeout(scrollToBottom, 500);
+    
+    return () => {
+      clearTimeout(timeoutId1);
+      clearTimeout(timeoutId2);
+      clearTimeout(timeoutId3);
+    };
   }, [chatHistory]);
   
   const handleNavigate = () => {
@@ -121,6 +200,7 @@ function MainApp() {
     };
 
     setChatHistory(prev => [...prev, userMessage]);
+    const originalMessage = chatMessage;
     setChatMessage('');
 
     // get real ai response
@@ -130,7 +210,7 @@ function MainApp() {
       console.log('Chat response - Connected:', isAIConnected);
       
       // get ai response through ipc
-      const result = await window.electronAPI.aiChat(chatMessage, chatHistory);
+      const result = await window.electronAPI.aiChat(originalMessage, chatHistory);
       
       let responseData;
       if (result.success && result.response) {
@@ -146,20 +226,104 @@ function MainApp() {
         };
       }
       
-      const mascotMessage = {
-        type: 'mascot',
-        message: responseData.message,
-        timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-        bufoFace: responseData.emotion
-      };
-      
-      setChatHistory(prev => [...prev, mascotMessage]);
-      
-      // update current bufo based on ai emotion
-      if (bufoManager.isLoaded()) {
-        setCurrentBufo(responseData.emotion);
-        const newBufoImage = bufoManager.getBufoByEmotion(responseData.emotion);
-        if (newBufoImage) setBufoImage(newBufoImage);
+      // check if AI wants to use tools
+      if (responseData.toolCall && responseData.toolCall.name === 'analyze_profile') {
+        console.log('AI requested profile analysis tool');
+        
+        // show ai response first
+        const initialResponse = {
+          type: 'mascot',
+          message: responseData.message,
+          timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+          bufoFace: responseData.emotion
+        };
+        setChatHistory(prev => [...prev, initialResponse]);
+        
+        // start downloading photos
+        setDownloadingPhotos(true);
+        setCurrentPhotos([]);
+        
+        // add photo downloading message with its own photo array
+        const downloadMessageId = Date.now(); // unique ID for this download
+        const downloadMessage = {
+          type: 'mascot',
+          message: 'downloading profile photos...',
+          timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+          bufoFace: 'thinking',
+          hasPhotoStack: true,
+          photoStackId: downloadMessageId,
+          photos: []
+        };
+        setChatHistory(prev => [...prev, downloadMessage]);
+        
+        try {
+          const downloadResult = await window.electronAPI.downloadProfileImages();
+          
+          if (downloadResult.success && downloadResult.images) {
+            console.log('Downloaded', downloadResult.images.length, 'images for analysis');
+            
+            // analyze profile with AI
+            setIsTyping(true);
+            const analysisResult = await window.electronAPI.aiAnalyzeProfile(
+              downloadResult.images,
+              originalMessage,
+              onboardingData
+            );
+            
+            if (analysisResult.success && analysisResult.response) {
+              // create analysis message with the complete response
+              const analysisMessage = {
+                type: 'mascot',
+                message: analysisResult.response.message,
+                timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                bufoFace: analysisResult.response.emotion
+              };
+              setChatHistory(prev => [...prev, analysisMessage]);
+              
+              // update bufo based on analysis emotion
+              if (bufoManager.isLoaded()) {
+                const newBufoImage = bufoManager.getBufoByEmotion(analysisResult.response.emotion);
+                if (newBufoImage) setBufoImage(newBufoImage);
+              }
+            } else {
+              throw new Error('Analysis failed');
+            }
+            
+          } else {
+            throw new Error('Download failed');
+          }
+          
+        } catch (toolError) {
+          console.error('Tool execution error:', toolError);
+          const errorMessage = {
+            type: 'mascot',
+            message: 'couldn\'t get their photos right now, but based on what i can see, trust your instincts! 😊',
+            timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+            bufoFace: 'casual'
+          };
+          setChatHistory(prev => [...prev, errorMessage]);
+        } finally {
+          setDownloadingPhotos(false);
+          setIsTyping(false);
+        }
+        
+      } else {
+        // normal response without tool calls
+        const mascotMessage = {
+          type: 'mascot',
+          message: responseData.message,
+          timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+          bufoFace: responseData.emotion
+        };
+        
+        setChatHistory(prev => [...prev, mascotMessage]);
+        
+        // update current bufo based on ai emotion
+        if (bufoManager.isLoaded()) {
+          setCurrentBufo(responseData.emotion);
+          const newBufoImage = bufoManager.getBufoByEmotion(responseData.emotion);
+          if (newBufoImage) setBufoImage(newBufoImage);
+        }
       }
       
     } catch (error) {
@@ -225,6 +389,13 @@ function MainApp() {
                 )}
                 <div className="message-content">
                   <span className="message-text">{msg.message}</span>
+                  {(msg as any).hasPhotoStack && (
+                    <PhotoStack 
+                      photos={(msg as any).photos || []} 
+                      isDownloading={downloadingPhotos}
+                      totalExpected={10}
+                    />
+                  )}
                   <span className="message-time">{msg.timestamp}</span>
                 </div>
               </div>
@@ -333,6 +504,62 @@ function MainApp() {
         <button onClick={handleLogUrl}>get image url</button>
         <button onClick={handleClickNext}>next photo</button>
         <button onClick={handleDownloadAll}>download all</button>
+      </div>
+      
+      {/* profile analysis test */}
+      <div className="form-group">
+        <label>profile analysis test:</label>
+        <div className="button-group">
+          <button onClick={async () => {
+            console.log('Testing profile download...');
+            setDownloadingPhotos(true);
+            
+            const downloadMessage = {
+              type: 'mascot',
+              message: 'testing photo download...',
+              timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+              bufoFace: 'thinking',
+              hasPhotoStack: true,
+              photos: []
+            };
+            setChatHistory(prev => [...prev, downloadMessage]);
+            
+            try {
+              const result = await window.electronAPI.downloadProfileImages();
+              console.log('Download result:', result);
+              
+              if (result.success && result.images) {
+                // update the message with final photos
+                setChatHistory(prev => {
+                  const updated = [...prev];
+                  // find the latest message with hasPhotoStack and update it
+                  for (let i = updated.length - 1; i >= 0; i--) {
+                    if ((updated[i] as any).hasPhotoStack) {
+                      (updated[i] as any).photos = result.images;
+                      break;
+                    }
+                  }
+                  return updated;
+                });
+                
+                const successMessage = {
+                  type: 'mascot',
+                  message: `downloaded ${result.count} photos successfully! 📸`,
+                  timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                  bufoFace: 'excited'
+                };
+                setChatHistory(prev => [...prev, successMessage]);
+              }
+            } catch (error) {
+              console.error('Download test error:', error);
+            } finally {
+              setDownloadingPhotos(false);
+            }
+          }}>test download</button>
+        </div>
+        <small style={{color: '#666', fontSize: '0.75rem'}}>
+          test profile photo downloading and stack display
+        </small>
       </div>
     </div>
   );

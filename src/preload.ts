@@ -14,4 +14,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   aiInitialize: (apiKey: string) => ipcRenderer.invoke('ai:initialize', apiKey),
   aiChat: (userMessage: string, conversationHistory: any[]) => ipcRenderer.invoke('ai:chat', userMessage, conversationHistory),
   aiStatus: () => ipcRenderer.invoke('ai:status'),
+  aiAnalyzeProfile: (images: string[], userMessage: string, onboardingData: any) => ipcRenderer.invoke('ai:analyze-profile', images, userMessage, onboardingData),
+  // profile image download
+  downloadProfileImages: () => ipcRenderer.invoke('download-profile-images'),
+  onDownloadProgress: (callback: (data: any) => void) => {
+    ipcRenderer.on('download-progress', (event: any, data: any) => callback(data));
+    return () => ipcRenderer.removeAllListeners('download-progress');
+  },
+
 });

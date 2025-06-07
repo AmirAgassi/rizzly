@@ -256,7 +256,7 @@ body {
 .chat-container {
     display: flex;
     flex-direction: column;
-    height: calc(100% - 140px); /* adjust for stats row */
+    height: 75vh; /* fixed height to force scrolling */
     background: #1a1a1a;
     border-radius: 8px;
     border: 1px solid #333;
@@ -299,6 +299,7 @@ body {
 
 .chat-messages {
     flex: 1;
+    min-height: 0; /* important for scrolling in flex containers */
     padding: 1rem;
     overflow-y: auto;
     display: flex;
