@@ -492,6 +492,20 @@ function MainApp() {
         <button onClick={handleDownloadAll}>download all</button>
       </div>
       
+      {/* textarea debug */}
+      <div className="form-group">
+        <label>message textarea debug:</label>
+        <div className="button-group">
+          <button onClick={() => {
+            console.log('Debugging textarea content...');
+            window.electronAPI.debugTextarea();
+          }}>debug textarea</button>
+        </div>
+        <small style={{color: '#666', fontSize: '0.75rem'}}>
+          check console for textarea content and properties
+        </small>
+      </div>
+      
       {/* profile analysis test */}
       <div className="form-group">
         <label>profile analysis test:</label>

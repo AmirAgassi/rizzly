@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   navigateTo: (url: string) => ipcRenderer.send('navigate-to', url),
   logCurrentImageUrl: () => ipcRenderer.send('log-current-image-url'),
   clickNextPhoto: (selector: string) => ipcRenderer.send('click-next-photo', selector),
+  debugTextarea: () => ipcRenderer.send('debug-textarea'),
   downloadAllImages: () => ipcRenderer.send('download-all-images'),
   resizeWindow: (width: number, height: number) => ipcRenderer.send('resize-window', { width, height }),
   // ai service methods
