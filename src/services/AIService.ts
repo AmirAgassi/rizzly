@@ -44,22 +44,21 @@ IMPORTANT: Your responses must be in this exact JSON format:
   "toolCall": "OPTIONAL - only if user wants profile analysis"
 }
 
-TOOL CALLS: ONLY use the tool call if the user EXPLICITLY mentions photos, images, or profile pictures. Examples that should trigger:
-- "check her photos"
-- "analyze her pics" 
-- "what do you think of her pictures?"
-- "thoughts on her photos?"
-- "analyze this profile"
+TOOL CALLS: Use tool calls for two specific scenarios:
 
-DO NOT use tool calls for general questions like "do I have a shot?", "thoughts about her?", "what's she like?" unless they specifically mention photos/images.
+1. PROFILE ANALYSIS: If user EXPLICITLY mentions photos, images, or profile pictures:
+- "check her photos", "analyze her pics", "what do you think of her pictures?"
+- "thoughts on her photos?", "analyze this profile"
+
+2. MESSAGE ASSISTANCE: If user asks for help with messaging/texting:
+- "how do i rephrase this", "what should i say instead", "help me rewrite this"
+- "make this sound better", "how can i improve this message", "what's a better way to say this"
+
+DO NOT use tool calls for general questions like "do I have a shot?", "thoughts about her?", "what's she like?"
 
 When triggered, include:
-{
-  "toolCall": {
-    "name": "analyze_profile", 
-    "reason": "user wants photo/image analysis"
-  }
-}
+Profile Analysis: {"toolCall": {"name": "analyze_profile", "reason": "user wants photo/image analysis"}}
+Message Help: {"toolCall": {"name": "message_assistance", "reason": "user wants help with their message"}}
 
 Guidelines:
 - Keep responses casual and lowercase (like "hey there!" not "Hello there!")
@@ -172,6 +171,94 @@ Remember: You're a fun, supportive dating wingman, not a formal assistant!`;
       ];
       
       return fallbacks[Math.floor(Math.random() * fallbacks.length)];
+    }
+  }
+
+  // help improve a message the user has written
+  async improveMessage(currentMessage: string, userRequest: string, onboardingData?: any, conversationHistory?: any[]): Promise<AIResponse> {
+    try {
+      // build context from recent chat history
+      const recentChat = conversationHistory?.slice(-3).map(msg => 
+        `${msg.type === 'user' ? 'user' : 'you'}: ${msg.message}`
+      ).join('\n') || '';
+
+      const messagePrompt = `You are a helpful dating copilot helping improve a message. Here's the context:
+
+User's dating goals: ${onboardingData?.primaryGoal || 'not specified'}
+Communication style: ${onboardingData?.communicationStyle?.join(', ') || 'not specified'}
+Interests: ${onboardingData?.conversationTopics?.join(', ') || 'not specified'}
+
+${recentChat ? `Recent conversation:\n${recentChat}\n` : ''}
+
+The user's current message draft: "${currentMessage}"
+User's request: "${userRequest}"
+
+Help them improve this message. Give 1-2 better alternatives or specific suggestions. Write entirely in lowercase, be casual and practical. Focus on making it more engaging, authentic, or effective for dating conversations.
+
+IMPORTANT: Response format should be:
+{
+  "message": "your advice and suggested improvements",
+  "emotion": "helpful, confident, or encouraging"
+}`;
+
+      const response = await fetch(this.baseUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'Meta-Llama-3.3-70B-Instruct',
+          messages: [{ role: 'user', content: messagePrompt }],
+          temperature: 0.7,
+          max_tokens: 200,
+          stream: false
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`ai api error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const aiMessage = data.choices?.[0]?.message?.content;
+
+      // try to parse json response
+      try {
+        const jsonMatch = aiMessage.match(/\{[^}]*"message"[^}]*\}/);
+        const jsonString = jsonMatch ? jsonMatch[0] : aiMessage;
+        const parsed = JSON.parse(jsonString);
+        
+        return {
+          message: parsed.message || aiMessage,
+          emotion: parsed.emotion || 'helpful',
+          confidence: 0.8
+        };
+      } catch (parseError) {
+        // fallback parsing
+        const messageMatch = aiMessage.match(/"message":\s*"([^"]+)"/);
+        if (messageMatch) {
+          return {
+            message: messageMatch[1],
+            emotion: 'helpful',
+            confidence: 0.7
+          };
+        }
+        
+        return {
+          message: aiMessage.replace(/\{.*\}/, '').trim(),
+          emotion: 'helpful',
+          confidence: 0.6
+        };
+      }
+
+    } catch (error) {
+      console.error('message assistance error:', error);
+      return {
+        message: "having trouble with that one - maybe try rephrasing your request?",
+        emotion: "confused",
+        confidence: 0.3
+      };
     }
   }
 

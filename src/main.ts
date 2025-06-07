@@ -484,6 +484,75 @@ ipcMain.handle('ai:analyze-profile', async (event, images: string[], userMessage
   }
 });
 
+ipcMain.handle('ai:improve-message', async (event, userRequest: string, onboardingData: any, conversationHistory: any[]) => {
+  try {
+    if (!aiService) {
+      return { 
+        success: false, 
+        error: 'AI service not initialized' 
+      };
+    }
+
+    if (!view) {
+      return { 
+        success: false, 
+        error: 'No browser view available' 
+      };
+    }
+
+    // first check if we're on the messages page
+    const currentUrl: string = await view.webContents.executeJavaScript('window.location.href');
+    if (!currentUrl.includes('tinder.com/app/messages')) {
+      return {
+        success: false,
+        error: 'Message assistance only available on Tinder messages page'
+      };
+    }
+
+    // get the current textarea content
+    const textareaContent: { found: boolean; content?: string; error?: string } = await view.webContents.executeJavaScript(`
+      (() => {
+        const textarea = document.querySelector('textarea[placeholder*="Type a message"], textarea[placeholder*="message"]');
+        if (textarea) {
+          return {
+            found: true,
+            content: textarea.value || ''
+          };
+        } else {
+          return {
+            found: false,
+            error: 'No message textarea found'
+          };
+        }
+      })();
+    `);
+
+    if (!textareaContent.found) {
+      return {
+        success: false,
+        error: 'Could not find message textarea on current page'
+      };
+    }
+
+    console.log('Main process: Improving message:', textareaContent.content?.substring(0, 50) + '...');
+    const response = await aiService.improveMessage(
+      textareaContent.content || '',
+      userRequest,
+      onboardingData,
+      conversationHistory
+    );
+    
+    console.log('Main process: Message improvement complete');
+    return { success: true, response, originalMessage: textareaContent.content };
+  } catch (error) {
+    console.error('Main process: Message assistance error:', error);
+    return { 
+      success: false, 
+      error: (error as Error).message || 'Unknown error' 
+    };
+  }
+});
+
 // enhanced download with progress tracking
 ipcMain.handle('download-profile-images', async (event) => {
   if (!view) return { success: false, error: 'No view available' };

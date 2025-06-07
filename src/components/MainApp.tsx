@@ -293,6 +293,78 @@ function MainApp() {
           setIsTyping(false);
         }
         
+      } else if (responseData.toolCall && responseData.toolCall.name === 'message_assistance') {
+        console.log('AI requested message assistance tool');
+        
+        // show ai response first
+        const initialResponse = {
+          type: 'mascot',
+          message: responseData.message,
+          timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+          bufoFace: responseData.emotion
+        };
+        setChatHistory(prev => [...prev, initialResponse]);
+        
+        // start message improvement
+        setIsTyping(true);
+        
+        try {
+          const assistanceResult = await window.electronAPI.aiImproveMessage(
+            originalMessage,
+            onboardingData,
+            chatHistory
+          );
+          
+          if (assistanceResult.success && assistanceResult.response) {
+            // create improvement message
+            const improvementMessage = {
+              type: 'mascot',
+              message: assistanceResult.response.message,
+              timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+              bufoFace: assistanceResult.response.emotion
+            };
+            setChatHistory(prev => [...prev, improvementMessage]);
+            
+            // show original message if it was found
+            if (assistanceResult.originalMessage) {
+              const originalMessageDisplay = {
+                type: 'mascot',
+                message: `your current draft: "${assistanceResult.originalMessage}"`,
+                timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                bufoFace: 'thinking'
+              };
+              setChatHistory(prev => {
+                const updated = [...prev];
+                // insert the original message before the improvement advice
+                updated.splice(-1, 0, originalMessageDisplay);
+                return updated;
+              });
+            }
+            
+            // update bufo based on assistance emotion
+            if (bufoManager.isLoaded()) {
+              const newBufoImage = bufoManager.getBufoByEmotion(assistanceResult.response.emotion);
+              if (newBufoImage) setBufoImage(newBufoImage);
+            }
+          } else {
+            throw new Error(assistanceResult.error || 'Assistance failed');
+          }
+          
+        } catch (toolError) {
+          console.error('Message assistance error:', toolError);
+          const errorMessage = {
+            type: 'mascot',
+            message: (toolError as Error)?.message?.includes('messages page') 
+              ? 'i can only help with messages when you\'re on the tinder chat page! 💬'
+              : 'having trouble analyzing your message right now. try again? 🤔',
+            timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+            bufoFace: 'confused'
+          };
+          setChatHistory(prev => [...prev, errorMessage]);
+        } finally {
+          setIsTyping(false);
+        }
+        
       } else {
         // normal response without tool calls
         const mascotMessage = {

@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   aiChat: (userMessage: string, conversationHistory: any[], onboardingData?: any) => ipcRenderer.invoke('ai:chat', userMessage, conversationHistory, onboardingData),
   aiStatus: () => ipcRenderer.invoke('ai:status'),
   aiAnalyzeProfile: (images: string[], userMessage: string, onboardingData: any, conversationHistory: any[]) => ipcRenderer.invoke('ai:analyze-profile', images, userMessage, onboardingData, conversationHistory),
+  aiImproveMessage: (userRequest: string, onboardingData: any, conversationHistory: any[]) => ipcRenderer.invoke('ai:improve-message', userRequest, onboardingData, conversationHistory),
   // profile image download
   downloadProfileImages: () => ipcRenderer.invoke('download-profile-images'),
   onDownloadProgress: (callback: (data: any) => void) => {
