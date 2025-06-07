@@ -338,16 +338,16 @@ function MainApp() {
       {/* stats row */}
       <div className="stats-row">
         <div className="stat-card">
-          <span className="stat-value">247</span>
+          <span className="stat-value">69</span>
           <span className="stat-label">matches</span>
         </div>
         <div className="stat-card">
-          <span className="stat-value">89</span>
+          <span className="stat-value">idk</span>
           <span className="stat-label">messages</span>
         </div>
         <div className="stat-card">
-          <span className="stat-value">67%</span>
-          <span className="stat-label">response</span>
+          <span className="stat-value">0</span>
+          <span className="stat-label">huzz</span>
         </div>
       </div>
 
