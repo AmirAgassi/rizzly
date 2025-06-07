@@ -249,6 +249,47 @@ ipcMain.on('click-next-photo', (event, selector) => {
   }
 });
 
+ipcMain.on('debug-textarea', (event) => {
+  if (view) {
+    console.log('--- debugging textarea content ---');
+    const script = `
+      (() => {
+        const textarea = document.querySelector('textarea[placeholder*="Type a message"], textarea[placeholder*="message"]');
+        if (textarea) {
+          return {
+            found: true,
+            content: textarea.value,
+            placeholder: textarea.placeholder,
+            maxLength: textarea.maxLength,
+            id: textarea.id,
+            classes: textarea.className
+          };
+        } else {
+          return {
+            found: false,
+            message: 'No message textarea found on current page'
+          };
+        }
+      })();
+    `;
+    view.webContents.executeJavaScript(script)
+      .then(result => {
+        if (result.found) {
+          console.log('Textarea found!');
+          console.log('Current content:', result.content || '(empty)');
+          console.log('Placeholder:', result.placeholder);
+          console.log('Max length:', result.maxLength);
+          console.log('ID:', result.id);
+          console.log('Classes:', result.classes);
+        } else {
+          console.log(result.message);
+        }
+        console.log('--- end debug ---');
+      })
+      .catch(err => console.error('Debug script execution failed:', err));
+  }
+});
+
 ipcMain.on('download-all-images', async () => {
   if (!view) return;
 
