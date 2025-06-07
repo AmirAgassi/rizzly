@@ -34,6 +34,9 @@ function MainApp() {
 
   // initialize bufo manager and ai on component mount
   useEffect(() => {
+    // clear any old chat history on startup for fresh session
+    localStorage.removeItem('rizzly-chat-history');
+    
     const initBufos = async () => {
       await bufoManager.loadAllBufos();
       if (bufoManager.isLoaded()) {
@@ -88,6 +91,38 @@ function MainApp() {
 
     return () => {
       removeProgressListener();
+    };
+  }, []);
+
+  // save chat history to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('rizzly-chat-history', JSON.stringify(chatHistory));
+  }, [chatHistory]);
+
+  // listen for emergency alerts
+  useEffect(() => {
+    const removeEmergencyListener = window.electronAPI.onEmergencyAlert((response) => {
+      console.log('🚨 Emergency alert received in UI:', response);
+      
+      // add urgent warning message to chat
+      const emergencyMessage = {
+        type: 'mascot',
+        message: `🚨 HOLD UP! ${response.message}`,
+        timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+        bufoFace: response.emotion
+      };
+      
+      setChatHistory(prev => [...prev, emergencyMessage]);
+      
+      // update bufo to concerned face
+      if (bufoManager.isLoaded()) {
+        const concernedBufo = bufoManager.getBufoByEmotion(response.emotion);
+        if (concernedBufo) setBufoImage(concernedBufo);
+      }
+    });
+
+    return () => {
+      removeEmergencyListener();
     };
   }, []);
 
@@ -549,9 +584,19 @@ function MainApp() {
             console.log('Debugging textarea content...');
             window.electronAPI.debugTextarea();
           }}>debug textarea</button>
+          <button onClick={async () => {
+            console.log('Testing emergency system...');
+            const testMessage = "heyo u look so ugly i feel like youd scare off a group of children";
+            const result = await window.electronAPI.aiEmergencyCheck(testMessage, onboardingData, chatHistory);
+            console.log('Emergency test result:', result);
+          }}>test emergency</button>
+          <button onClick={() => {
+            console.log('Checking monitoring status...');
+            window.electronAPI.checkMonitoring();
+          }}>check monitoring</button>
         </div>
         <small style={{color: '#666', fontSize: '0.75rem'}}>
-          check console for textarea content and properties
+          check console for textarea content and emergency test results
         </small>
       </div>
       

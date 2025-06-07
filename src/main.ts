@@ -83,6 +83,83 @@ ipcMain.on('onboarding-complete', () => {
   view.webContents.loadURL('https://tinder.com/app/recs');
   // view.webContents.openDevTools({ mode: 'detach' });
 
+    // inject real-time message monitoring when page loads
+  view.webContents.on('did-finish-load', () => {
+    console.log('🔄 Browser view finished loading, setting up monitoring...');
+    
+    // instead of complex injection, let's use a simpler approach with periodic checking
+    const startMonitoring = () => {
+      setInterval(async () => {
+        try {
+          const currentUrl = view.webContents.getURL();
+          
+          // only monitor on messages pages
+          if (!currentUrl.includes('tinder.com/app/messages/')) {
+            return;
+          }
+          
+          // get current textarea content
+          const result = await view.webContents.executeJavaScript(`
+            (() => {
+              const textarea = document.querySelector('textarea[placeholder*="Type a message"], textarea[placeholder*="message"]');
+              if (textarea && textarea.value && textarea.value.trim().length >= 5) {
+                return {
+                  found: true,
+                  content: textarea.value.trim(),
+                  lastCheck: Date.now()
+                };
+              }
+              return { found: false };
+            })();
+          `);
+          
+                     if (result.found && result.content) {
+            // check if this message has already been checked recently
+            const cacheKey = 'emergency-' + result.content.substring(0, 20);
+            const lastCheck = (global as any).emergencyCache?.[cacheKey] || 0;
+            const now = Date.now();
+            
+            // only check if it's been more than 30 seconds since last check of this message
+            if (now - lastCheck > 30000) {
+              if (!(global as any).emergencyCache) (global as any).emergencyCache = {};
+              (global as any).emergencyCache[cacheKey] = now;
+              
+              console.log('🔍 Periodic check found message:', result.content.substring(0, 30) + '...');
+               
+               // get onboarding data and chat history from main window's localStorage
+               const onboardingData = await mainWindow.webContents.executeJavaScript(
+                 `JSON.parse(localStorage.getItem('rizzly-preferences') || 'null')`
+               );
+               const chatHistory = await mainWindow.webContents.executeJavaScript(
+                 `JSON.parse(localStorage.getItem('rizzly-chat-history') || '[]')`
+               );
+              
+              // run emergency check
+              if (aiService) {
+                const emergencyResult = await aiService.detectEmergency(result.content, onboardingData, chatHistory);
+                
+                if (emergencyResult.isEmergency) {
+                  console.log('🚨 PERIODIC EMERGENCY DETECTED:', result.content);
+                  
+                  // send emergency alert to main window
+                  if (mainWindow) {
+                    mainWindow.webContents.send('emergency-alert', emergencyResult);
+                  }
+                }
+              }
+            }
+          }
+          
+        } catch (error) {
+          // silently ignore errors to avoid spam
+        }
+      }, 2000); // check every 2 seconds
+    };
+    
+    // start monitoring after a short delay
+    setTimeout(startMonitoring, 3000);
+  });
+
   // handle file downloads
   view.webContents.session.on('will-download', (event: any, item: any, webContents: any) => {
     // let's save to the user's downloads folder
@@ -246,6 +323,37 @@ ipcMain.on('click-next-photo', (event, selector) => {
         logs.forEach((log: string) => console.log(log));
       })
       .catch(err => console.error('Script execution failed:', err));
+  }
+});
+
+ipcMain.on('check-monitoring', (event) => {
+  if (view) {
+    console.log('--- checking emergency monitoring status ---');
+    const script = `
+      (() => {
+        const hasRizzlyMonitoring = !!document.querySelector('textarea[data-rizzly-monitored]');
+        const currentUrl = window.location.href;
+        const isMessagesPage = currentUrl.includes('tinder.com/app/messages/');
+        const hasTextarea = !!document.querySelector('textarea[placeholder*="Type a message"], textarea[placeholder*="message"]');
+        
+        return {
+          hasRizzlyMonitoring,
+          currentUrl,
+          isMessagesPage,
+          hasTextarea,
+          localStorage: {
+            hasPreferences: !!localStorage.getItem('rizzly-preferences'),
+            hasChatHistory: !!localStorage.getItem('rizzly-chat-history')
+          }
+        };
+      })();
+    `;
+    view.webContents.executeJavaScript(script)
+      .then(result => {
+        console.log('Monitoring status:', result);
+        console.log('--- end monitoring check ---');
+      })
+      .catch(err => console.error('Monitoring check failed:', err));
   }
 });
 
@@ -550,6 +658,53 @@ ipcMain.handle('ai:improve-message', async (event, userRequest: string, onboardi
       success: false, 
       error: (error as Error).message || 'Unknown error' 
     };
+  }
+});
+
+ipcMain.handle('ai:emergency-check', async (event, currentMessage: string, onboardingData: any, conversationHistory: any[]) => {
+  try {
+    if (!aiService) {
+      return { success: false, isEmergency: false };
+    }
+
+    if (!view) {
+      return { success: false, isEmergency: false };
+    }
+
+    // check if we're on messages page
+    const currentUrl: string = await view.webContents.executeJavaScript('window.location.href');
+    if (!currentUrl.includes('tinder.com/app/messages/')) {
+      return { success: false, isEmergency: false };
+    }
+
+    // skip empty or very short messages
+    if (!currentMessage || currentMessage.trim().length < 5) {
+      return { success: true, isEmergency: false };
+    }
+
+    console.log('Emergency check for:', currentMessage.substring(0, 30) + '...');
+    const result = await aiService.detectEmergency(currentMessage, onboardingData, conversationHistory);
+    
+    if (result.isEmergency) {
+      console.log('🚨 EMERGENCY DETECTED:', currentMessage);
+    }
+    
+    return { 
+      success: true, 
+      isEmergency: result.isEmergency,
+      response: result.isEmergency ? result : undefined
+    };
+  } catch (error) {
+    console.error('Emergency check error:', error);
+    return { success: false, isEmergency: false };
+  }
+});
+
+ipcMain.on('emergency-alert', (event, response) => {
+  console.log('🚨 Emergency alert received:', response);
+  // forward the emergency alert to the main window
+  if (mainWindow) {
+    mainWindow.webContents.send('emergency-alert', response);
   }
 });
 

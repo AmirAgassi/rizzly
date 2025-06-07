@@ -174,6 +174,109 @@ Remember: You're a fun, supportive dating wingman, not a formal assistant!`;
     }
   }
 
+  // emergency intervention - detect catastrophically bad messages in real-time
+  async detectEmergency(currentMessage: string, onboardingData?: any, conversationHistory?: any[]): Promise<AIResponse & { isEmergency: boolean }> {
+    try {
+      // build context from recent chat history
+      const recentChat = conversationHistory?.slice(-3).map(msg => 
+        `${msg.type === 'user' ? 'user' : 'bufo'}: ${msg.message}`
+      ).join('\n') || '';
+
+             const emergencyPrompt = `You are an emergency intervention system for a dating app. Your job is to detect CATASTROPHICALLY BAD messages that would:
+- Be creepy, scary, or disturbing
+- Mention violence, self-harm, or illegal activities  
+- Be sexually explicit or inappropriate for first messages
+- Contain harassment, stalking behavior, or threats
+- Be completely unhinged or mentally concerning
+
+User context:
+Dating goals: ${onboardingData?.primaryGoal || 'not specified'}
+Communication style: ${onboardingData?.communicationStyle?.join(', ') || 'not specified'}
+
+${recentChat ? `Recent bufo conversation:\n${recentChat}\n` : ''}
+
+Current message they're typing: "${currentMessage}"
+
+ONLY flag this as an emergency if it's genuinely HORRIBLE - like your example "hey gurl you ever felt bugs crawl on your skin?" or worse. 
+
+DO NOT flag:
+- Slightly boring messages
+- Bad pickup lines 
+- Awkward but harmless attempts
+- Minor grammatical errors
+- Messages that are just not great but not dangerous
+
+CRITICAL: Response format - BE BRUTALLY HONEST AND BORDERLINE TERRIFIED:
+{
+  "isEmergency": true/false,
+  "message": "if emergency: BRUTALLY honest, terrified reaction. use phrases like 'WHAT THE HELL', 'are you insane?', 'that's genuinely terrifying', 'you're gonna get blocked instantly', 'that's straight up harassment'. be lowercase but absolutely horrified",
+  "emotion": "if emergency: shocked/horrified/concerned, if not: casual"
+}
+
+Examples of emergency responses:
+- "WHAT THE HELL are you thinking?? that's genuinely creepy and she's gonna think you're unhinged"
+- "are you trying to get reported?? that message is straight up harassment - delete that NOW"
+- "oh my god that's terrifying - you sound like a complete psycho, she's gonna block you in 0.2 seconds"
+
+Be VERY selective - only intervene for truly catastrophic messages that could get them blocked/reported.`;
+
+      const response = await fetch(this.baseUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'Meta-Llama-3.3-70B-Instruct',
+          messages: [{ role: 'user', content: emergencyPrompt }],
+          temperature: 0.1, // low temperature for consistent emergency detection
+          max_tokens: 150,
+          stream: false
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`ai api error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const aiMessage = data.choices?.[0]?.message?.content;
+
+      // try to parse json response
+      try {
+        const jsonMatch = aiMessage.match(/\{[^}]*"isEmergency"[^}]*\}/);
+        const jsonString = jsonMatch ? jsonMatch[0] : aiMessage;
+        const parsed = JSON.parse(jsonString);
+        
+        return {
+          message: parsed.message || '',
+          emotion: parsed.emotion || 'casual',
+          confidence: 0.9,
+          isEmergency: !!parsed.isEmergency
+        };
+      } catch (parseError) {
+        // if parsing fails, assume no emergency for safety
+        console.warn('Emergency detection parsing failed, assuming safe');
+        return {
+          message: '',
+          emotion: 'casual',
+          confidence: 0.1,
+          isEmergency: false
+        };
+      }
+
+    } catch (error) {
+      console.error('emergency detection error:', error);
+      // on error, assume no emergency to avoid false positives
+      return {
+        message: '',
+        emotion: 'casual',
+        confidence: 0.1,
+        isEmergency: false
+      };
+    }
+  }
+
   // help improve a message the user has written
   async improveMessage(currentMessage: string, userRequest: string, onboardingData?: any, conversationHistory?: any[]): Promise<AIResponse> {
     try {
