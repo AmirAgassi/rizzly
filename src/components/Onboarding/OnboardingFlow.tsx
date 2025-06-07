@@ -19,8 +19,7 @@ export interface OnboardingData {
   conversationTopics: string[];
   // step 6: opener style
   openerStyle: string;
-  // step 7: response speed
-  responseSpeed: string;
+
   // step 8: name
   name: string;
   // step 9: notifications
@@ -297,53 +296,7 @@ const OpenerStyleQuestion = ({ data, updateData, onNext, onBack }: any) => (
   </div>
 );
 
-const ResponseSpeedQuestion = ({ data, updateData, onNext, onBack }: any) => (
-  <div className="onboarding-content">
-    <h2>How should your AI pace conversations?</h2>
-    <p className="subtitle">
-      Choose the response timing that matches your dating style and personality.
-    </p>
 
-    <div className="text-input-group">
-      <div className="onboarding-options three-column">
-        <label>
-          <input 
-            type="radio" 
-            name="responseSpeed" 
-            value="quick" 
-            checked={data.responseSpeed === 'quick'} 
-            onChange={(e) => updateData({ responseSpeed: e.target.value })} 
-          />
-          <span className="option-icon">⚡</span>
-          Quick responses
-        </label>
-        <label>
-          <input 
-            type="radio" 
-            name="responseSpeed" 
-            value="moderate" 
-            checked={data.responseSpeed === 'moderate'} 
-            onChange={(e) => updateData({ responseSpeed: e.target.value })} 
-          />
-          <span className="option-icon">⏰</span>
-          Moderate pace
-        </label>
-        <label>
-          <input 
-            type="radio" 
-            name="responseSpeed" 
-            value="slow" 
-            checked={data.responseSpeed === 'slow'} 
-            onChange={(e) => updateData({ responseSpeed: e.target.value })} 
-          />
-          <span className="option-icon">🐌</span>
-          Slow responses
-        </label>
-      </div>
-    </div>
-
-  </div>
-);
 
 const NameQuestion = ({ data, updateData, onNext, onBack }: any) => (
   <div className="onboarding-content">
@@ -392,7 +345,7 @@ const NotificationsQuestion = ({ data, updateData, onNext, onBack }: any) => (
 
 function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [step, setStep] = useState(0); // start at 0 to skip buggy first render
-  const totalSteps = 10;
+  const totalSteps = 9;
   
   const [data, setData] = useState<OnboardingData>({
     primaryGoal: '',
@@ -400,7 +353,6 @@ function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     communicationStyle: [],
     conversationTopics: [],
     openerStyle: '',
-    responseSpeed: '',
     name: '',
     notifications: true,
   });
@@ -451,10 +403,9 @@ function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       case 4: return !data.communicationStyle?.length;
       case 5: return !data.conversationTopics?.length;
       case 6: return !data.openerStyle;
-      case 7: return !data.responseSpeed;
-      case 8: return !data.name.trim();
-      case 9: return false; // notifications step never disabled
-      case 10: return false; // final step
+      case 7: return !data.name.trim();
+      case 8: return false; // notifications step never disabled
+      case 9: return false; // final step
       default: return false;
     }
   };
@@ -483,12 +434,10 @@ function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       case 6:
         return <OpenerStyleQuestion key="opener" {...commonProps} />;
       case 7:
-        return <ResponseSpeedQuestion key="speed" {...commonProps} />;
-      case 8:
         return <NameQuestion key="name" {...commonProps} />;
-      case 9:
+      case 8:
         return <NotificationsQuestion key="notifications" {...commonProps} />;
-      case 10:
+      case 9:
         return <FinalSetup key="final" data={data} updateData={updateData} onFinish={handleComplete} onBack={back} />;
       default:
         console.log('ERROR: Invalid step, defaulting to welcome');
@@ -513,14 +462,13 @@ function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           {step === 4 && <CommunicationStyleQuestion data={data} updateData={updateData} onNext={next} onBack={back} />}
           {step === 5 && <TopicsQuestion data={data} updateData={updateData} onNext={next} onBack={back} />}
           {step === 6 && <OpenerStyleQuestion data={data} updateData={updateData} onNext={next} onBack={back} />}
-          {step === 7 && <ResponseSpeedQuestion data={data} updateData={updateData} onNext={next} onBack={back} />}
-          {step === 8 && <NameQuestion data={data} updateData={updateData} onNext={next} onBack={back} />}
-          {step === 9 && <NotificationsQuestion data={data} updateData={updateData} onNext={next} onBack={back} />}
-          {step === 10 && <FinalSetup data={data} updateData={updateData} onFinish={handleComplete} onBack={back} />}
+          {step === 7 && <NameQuestion data={data} updateData={updateData} onNext={next} onBack={back} />}
+          {step === 8 && <NotificationsQuestion data={data} updateData={updateData} onNext={next} onBack={back} />}
+          {step === 9 && <FinalSetup data={data} updateData={updateData} onFinish={handleComplete} onBack={back} />}
         </div>
         
         {/* fixed navigation buttons */}
-        {step > 0 && step <= 10 && (
+        {step > 0 && step <= 9 && (
           <div className="navigation-buttons">
             <button 
               onClick={() => {
@@ -535,17 +483,17 @@ function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             <button 
               onClick={() => {
                 console.log('Next clicked, current step:', step);
-                if (step === 10) {
+                if (step === 9) {
                   handleComplete();
                 } else {
                   next();
                 }
               }} 
-              className={`next-button ${step === 10 ? 'primary' : ''}`}
+              className={`next-button ${step === 9 ? 'primary' : ''}`}
               disabled={isNextDisabled()}
               style={{ pointerEvents: 'auto', zIndex: 10000 }}
             >
-              {step === 10 ? 'Launch Rizzly' : 'Continue'}
+              {step === 9 ? 'Launch Rizzly' : 'Continue'}
             </button>
           </div>
         )}

@@ -81,7 +81,6 @@
   border: 1px solid rgba(72, 219, 251, 0.3);
 }
 
-/* subtle hover effect - just brightness */
 .photo-stack:hover .photo-item {
   filter: brightness(1.1);
   transition: filter 0.2s ease;

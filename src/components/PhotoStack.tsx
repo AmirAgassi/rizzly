@@ -8,23 +8,22 @@ interface PhotoStackProps {
 }
 
 function PhotoStack({ photos, isDownloading, totalExpected }: PhotoStackProps) {
-  console.log('PhotoStack render:', { photoCount: photos.length, isDownloading });
+  console.log('photostack render:', { photoCount: photos.length, isDownloading });
   
   return (
     <div className="photo-stack-container">
       <div className="photo-stack">
         {photos.map((photo, index) => {
-          // Fan from bottom effect - like cards in your hand
-          const fanAngle = (index - photos.length / 2) * 12; // spread from center
-          const fanDistance = index * 8; // distance from bottom center
-          const randomTilt = [-3, 2, -1, 4, -2, 1, -4, 3, -1, 2][index] || 0; // slight random tilt
+          const fanAngle = (index - photos.length / 2) * 12;
+          const fanDistance = index * 8;
+          const randomTilt = [-3, 2, -1, 4, -2, 1, -4, 3, -1, 2][index] || 0;
           
           const rotation = fanAngle + randomTilt;
           const translateX = Math.sin(fanAngle * Math.PI / 180) * fanDistance;
-          const translateY = -Math.abs(index * 3); // slightly upward as they spread
+          const translateY = -Math.abs(index * 3);
           const transformValue = `rotate(${rotation}deg) translate(${translateX}px, ${translateY}px)`;
           
-          console.log(`Photo ${index}: transform = ${transformValue}`);
+          console.log(`photo ${index}: transform = ${transformValue}`);
           
           return (
             <div 
@@ -39,7 +38,7 @@ function PhotoStack({ photos, isDownloading, totalExpected }: PhotoStackProps) {
                 position: 'absolute'
               }}
             >
-              <img src={`data:image/jpeg;base64,${photo}`} alt={`Profile ${index + 1}`} />
+              <img src={`data:image/jpeg;base64,${photo}`} alt={`profile ${index + 1}`} />
             </div>
           );
         })}
@@ -54,7 +53,7 @@ function PhotoStack({ photos, isDownloading, totalExpected }: PhotoStackProps) {
       
       {photos.length > 0 && !isDownloading && (
         <div className="stack-summary">
-          <span>{photos.length} photos collected 📸</span>
+          <span>{photos.length} photos collected</span>
         </div>
       )}
     </div>

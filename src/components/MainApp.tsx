@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import './MainApp.css';
 import { bufoManager } from './BufoManager';
 import PhotoStack from './PhotoStack';
-// fallback mascot
 import bufoTea from '../bufopack/bufo-tea.png';
 
 function MainApp() {

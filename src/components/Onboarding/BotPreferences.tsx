@@ -29,11 +29,7 @@ function BotPreferences({ data, updateData, onNext, onBack }: BotPreferencesProp
     updateData({ openerStyle: style });
   };
 
-  const handleResponseSpeedChange = (speed: string) => {
-    updateData({ responseSpeed: speed });
-  };
-
-  const canProceed = data.communicationStyle.length > 0 && data.conversationTopics.length > 0 && data.openerStyle && data.responseSpeed;
+  const canProceed = data.communicationStyle.length > 0 && data.conversationTopics.length > 0 && data.openerStyle;
 
   return (
     <div className="onboarding-content">
@@ -146,44 +142,7 @@ function BotPreferences({ data, updateData, onNext, onBack }: BotPreferencesProp
         </div>
       </div>
 
-      <div className="text-input-group">
-        <label>How should the AI pace conversations?</label>
-        <div className="onboarding-options three-column">
-          <label>
-            <input 
-              type="radio" 
-              name="responseSpeed" 
-              value="quick" 
-              checked={data.responseSpeed === 'quick'} 
-              onChange={(e) => handleResponseSpeedChange(e.target.value)} 
-            />
-            <span className="option-icon">⚡</span>
-            Quick responses
-          </label>
-          <label>
-            <input 
-              type="radio" 
-              name="responseSpeed" 
-              value="moderate" 
-              checked={data.responseSpeed === 'moderate'} 
-              onChange={(e) => handleResponseSpeedChange(e.target.value)} 
-            />
-            <span className="option-icon">⏰</span>
-            Moderate pace
-          </label>
-          <label>
-            <input 
-              type="radio" 
-              name="responseSpeed" 
-              value="slow" 
-              checked={data.responseSpeed === 'slow'} 
-              onChange={(e) => handleResponseSpeedChange(e.target.value)} 
-            />
-            <span className="option-icon">🐌</span>
-            Slow responses
-          </label>
-        </div>
-      </div>
+
 
       <div className="navigation-buttons">
         <button onClick={onBack} className="back-button">Back</button>
