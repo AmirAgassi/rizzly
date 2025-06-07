@@ -12,7 +12,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   resizeWindow: (width: number, height: number) => ipcRenderer.send('resize-window', { width, height }),
   // ai service methods
   aiInitialize: (apiKey: string) => ipcRenderer.invoke('ai:initialize', apiKey),
-  aiChat: (userMessage: string, conversationHistory: any[]) => ipcRenderer.invoke('ai:chat', userMessage, conversationHistory),
+  aiChat: (userMessage: string, conversationHistory: any[], onboardingData?: any) => ipcRenderer.invoke('ai:chat', userMessage, conversationHistory, onboardingData),
   aiStatus: () => ipcRenderer.invoke('ai:status'),
   aiAnalyzeProfile: (images: string[], userMessage: string, onboardingData: any, conversationHistory: any[]) => ipcRenderer.invoke('ai:analyze-profile', images, userMessage, onboardingData, conversationHistory),
   // profile image download

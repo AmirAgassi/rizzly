@@ -25,8 +25,17 @@ export class AIService {
   }
 
   // system prompt for the dating copilot
-  private getSystemPrompt(): string {
-    return `You are a witty, helpful dating copilot assistant named Bufo. You help users with dating advice, profile analysis, conversation starters, and relationship guidance.
+  private getSystemPrompt(onboardingData?: any): string {
+    const userContext = onboardingData ? `
+
+USER CONTEXT:
+- Dating goals: ${onboardingData.primaryGoal || 'not specified'}
+- Communication style: ${onboardingData.communicationStyle?.join(', ') || 'not specified'}  
+- Interests: ${onboardingData.conversationTopics?.join(', ') || 'not specified'}
+- Relationship type: ${onboardingData.relationshipType || 
+  'not specified'}` : '';
+
+    return `You are a witty, helpful dating copilot assistant named Bufo. You help users with dating advice, profile analysis, conversation starters, and relationship guidance.${userContext}
 
 IMPORTANT: Your responses must be in this exact JSON format:
 {
@@ -52,16 +61,17 @@ Guidelines:
 - Choose the emotion that best matches your response tone
 - Keep responses concise but helpful (1-3 sentences max)
 - When tool calls are needed, tell user you're going to analyze their photos
+${onboardingData ? '- Tailor advice to their specific dating goals and communication style' : ''}
 
 Remember: You're a fun, supportive dating wingman, not a formal assistant!`;
   }
 
   // get ai response with streaming support
-  async getChatResponse(userMessage: string, conversationHistory: any[] = []): Promise<AIResponse> {
+  async getChatResponse(userMessage: string, conversationHistory: any[] = [], onboardingData?: any): Promise<AIResponse> {
     try {
       // build messages array with conversation context
       const messages = [
-        { role: 'system', content: this.getSystemPrompt() },
+        { role: 'system', content: this.getSystemPrompt(onboardingData) },
         // add recent conversation context (last 5 messages)
         ...conversationHistory.slice(-5).map(msg => ({
           role: msg.type === 'user' ? 'user' : 'assistant',

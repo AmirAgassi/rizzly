@@ -378,7 +378,7 @@ ipcMain.handle('ai:initialize', async (event, apiKey: string) => {
   }
 });
 
-ipcMain.handle('ai:chat', async (event, userMessage: string, conversationHistory: any[]) => {
+ipcMain.handle('ai:chat', async (event, userMessage: string, conversationHistory: any[], onboardingData?: any) => {
   try {
     if (!aiService) {
       return { 
@@ -393,7 +393,7 @@ ipcMain.handle('ai:chat', async (event, userMessage: string, conversationHistory
     }
 
     console.log('Main process: Getting AI response for:', userMessage.substring(0, 50) + '...');
-    const response = await aiService.getChatResponse(userMessage, conversationHistory);
+    const response = await aiService.getChatResponse(userMessage, conversationHistory, onboardingData);
     console.log('Main process: AI responded with emotion:', response.emotion);
     
     return { success: true, response };

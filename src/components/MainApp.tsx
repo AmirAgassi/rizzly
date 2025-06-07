@@ -210,7 +210,7 @@ function MainApp() {
       console.log('Chat response - Connected:', isAIConnected);
       
       // get ai response through ipc
-      const result = await window.electronAPI.aiChat(originalMessage, chatHistory);
+      const result = await window.electronAPI.aiChat(originalMessage, chatHistory, onboardingData);
       
       let responseData;
       if (result.success && result.response) {

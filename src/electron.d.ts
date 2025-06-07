@@ -7,7 +7,7 @@ export interface IElectronAPI {
   resizeWindow: (width: number, height: number) => void;
   // ai service methods
   aiInitialize: (apiKey: string) => Promise<{ success: boolean; error?: string }>;
-  aiChat: (userMessage: string, conversationHistory: any[]) => Promise<{ success: boolean; response?: any; error?: string; fallback?: any }>;
+  aiChat: (userMessage: string, conversationHistory: any[], onboardingData?: any) => Promise<{ success: boolean; response?: any; error?: string; fallback?: any }>;
   aiStatus: () => Promise<{ isConnected: boolean }>;
   aiAnalyzeProfile: (images: string[], userMessage: string, onboardingData: any, conversationHistory: any[]) => Promise<{ success: boolean; response?: any; error?: string }>;
   // profile image download
