@@ -8,22 +8,19 @@ interface OnboardingFlowProps {
 }
 
 export interface OnboardingData {
-  // step 1: welcome
-  // step 2: primary goal
+  // step 0: welcome
+  // step 1: primary goal
   primaryGoal: string;
-  // step 3: assistance level
+  // step 2: assistance level
   assistanceLevel: string;
-  // step 4: communication style
+  // step 3: communication style
   communicationStyle: string[];
-  // step 5: conversation topics
+  // step 4: conversation topics
   conversationTopics: string[];
-  // step 6: opener style
+  // step 5: opener style
   openerStyle: string;
-
-  // step 8: name
+  // step 6: name
   name: string;
-  // step 9: notifications
-  notifications: boolean;
 }
 
 // individual question components
@@ -86,7 +83,7 @@ const GoalQuestion = ({ data, updateData, onNext, onBack }: any) => (
   </div>
 );
 
-const AssistanceLevelQuestion = ({ data, updateData, onNext, onBack }: any) => (
+const AssistanceLevelQuestion = ({ data, updateData }: any) => (
   <div className="onboarding-content">
     <h2>How can your dating copilot help?</h2>
     <p className="subtitle">
@@ -320,32 +317,9 @@ const NameQuestion = ({ data, updateData, onNext, onBack }: any) => (
   </div>
 );
 
-const NotificationsQuestion = ({ data, updateData, onNext, onBack }: any) => (
-  <div className="onboarding-content">
-    <h2>Stay in the loop?</h2>
-    <p className="subtitle">
-      Get notified about new matches, conversations, and AI activity to never miss an opportunity.
-    </p>
-
-    <div className="text-input-group">
-      <div className="toggle-container">
-        <div>
-          <strong>Enable Notifications</strong>
-          <p>Get notified about matches and AI activity</p>
-        </div>
-        <div 
-          className={`toggle-switch ${data.notifications ? 'active' : ''}`}
-          onClick={() => updateData({ notifications: !data.notifications })}
-        ></div>
-      </div>
-    </div>
-
-  </div>
-);
-
 function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [step, setStep] = useState(0); // start at 0 to skip buggy first render
-  const totalSteps = 9;
+  const totalSteps = 8;
   
   const [data, setData] = useState<OnboardingData>({
     primaryGoal: '',
@@ -354,7 +328,6 @@ function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     conversationTopics: [],
     openerStyle: '',
     name: '',
-    notifications: true,
   });
 
   const next = () => setStep(s => Math.min(s + 1, totalSteps));
@@ -404,8 +377,7 @@ function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       case 5: return !data.conversationTopics?.length;
       case 6: return !data.openerStyle;
       case 7: return !data.name.trim();
-      case 8: return false; // notifications step never disabled
-      case 9: return false; // final step
+      case 8: return false; // final step
       default: return false;
     }
   };
@@ -436,8 +408,6 @@ function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       case 7:
         return <NameQuestion key="name" {...commonProps} />;
       case 8:
-        return <NotificationsQuestion key="notifications" {...commonProps} />;
-      case 9:
         return <FinalSetup key="final" data={data} updateData={updateData} onFinish={handleComplete} onBack={back} />;
       default:
         console.log('ERROR: Invalid step, defaulting to welcome');
@@ -463,12 +433,11 @@ function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           {step === 5 && <TopicsQuestion data={data} updateData={updateData} onNext={next} onBack={back} />}
           {step === 6 && <OpenerStyleQuestion data={data} updateData={updateData} onNext={next} onBack={back} />}
           {step === 7 && <NameQuestion data={data} updateData={updateData} onNext={next} onBack={back} />}
-          {step === 8 && <NotificationsQuestion data={data} updateData={updateData} onNext={next} onBack={back} />}
-          {step === 9 && <FinalSetup data={data} updateData={updateData} onFinish={handleComplete} onBack={back} />}
+          {step === 8 && <FinalSetup data={data} updateData={updateData} onFinish={handleComplete} onBack={back} />}
         </div>
         
-        {/* fixed navigation buttons */}
-        {step > 0 && step <= 9 && (
+        {/* nav buttons */}
+        {step > 0 && step <= 8 && (
           <div className="navigation-buttons">
             <button 
               onClick={() => {
@@ -483,17 +452,17 @@ function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             <button 
               onClick={() => {
                 console.log('Next clicked, current step:', step);
-                if (step === 9) {
+                if (step === 8) {
                   handleComplete();
                 } else {
                   next();
                 }
               }} 
-              className={`next-button ${step === 9 ? 'primary' : ''}`}
+              className={`next-button ${step === 8 ? 'primary' : ''}`}
               disabled={isNextDisabled()}
               style={{ pointerEvents: 'auto', zIndex: 10000 }}
             >
-              {step === 9 ? 'Launch Rizzly' : 'Continue'}
+              {step === 8 ? 'Launch Rizzly' : 'Continue'}
             </button>
           </div>
         )}

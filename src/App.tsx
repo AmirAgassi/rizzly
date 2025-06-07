@@ -10,7 +10,6 @@ function App() {
     setOnboardingComplete(true);
   };
 
-  // force complete remount when switching between components
   if (onboardingComplete) {
     return <MainApp key="main-app" />;
   } else {

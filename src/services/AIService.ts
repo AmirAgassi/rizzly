@@ -109,7 +109,7 @@ Remember: You're a fun, supportive dating wingman, not a formal assistant!`;
           messages,
           temperature: 0.7,
           max_tokens: 150,
-          stream: false // start with non-streaming for simplicity
+          stream: false
         })
       });
 
@@ -176,8 +176,8 @@ Remember: You're a fun, supportive dating wingman, not a formal assistant!`;
       // fallback responses
       const fallbacks = [
         { message: "hmm, i'm having trouble connecting right now. try asking again?", emotion: "confused", confidence: 0.3 },
-        { message: "looks like my brain needs a coffee break ☕ give me a sec and try again", emotion: "chill", confidence: 0.3 },
-        { message: "technical difficulties! but hey, that's what makes dating interesting too 😅", emotion: "casual", confidence: 0.3 }
+        { message: "looks like my brain needs a coffee break give me a sec and try again", emotion: "chill", confidence: 0.3 },
+        { message: "technical difficulties! but hey, that's what makes dating interesting too", emotion: "casual", confidence: 0.3 }
       ];
       
       return fallbacks[Math.floor(Math.random() * fallbacks.length)];
@@ -243,7 +243,7 @@ Be EXTREMELY selective - err strongly on the side of NOT flagging unless it's ge
         body: JSON.stringify({
           model: 'Meta-Llama-3.3-70B-Instruct',
           messages: [{ role: 'user', content: emergencyPrompt }],
-          temperature: 0.1, // low temperature for consistent emergency detection
+          temperature: 0.1, // low temp here for consistent emergency detection
           max_tokens: 150,
           stream: false
         })
@@ -270,7 +270,7 @@ Be EXTREMELY selective - err strongly on the side of NOT flagging unless it's ge
         };
       } catch (parseError) {
         // if parsing fails, assume no emergency for safety
-        console.warn('Emergency detection parsing failed, assuming safe');
+        console.warn('emergency detection parsing failed, assuming safe');
         return {
           message: '',
           emotion: 'casual',
@@ -353,7 +353,7 @@ Response format: {"message": "your reaction", "emotion": "shocked/relieved/conce
     } catch (error) {
       console.error('follow-up generation error:', error);
       return {
-        message: "crisis averted! that message was genuinely unhinged 😰",
+        message: "crisis averted! that message was genuinely unhinged",
         emotion: "shocked",
         confidence: 0.3
       };
@@ -424,7 +424,7 @@ Response format: {"message": "your response", "emotion": "flirty/confident/excit
     } catch (error) {
       console.error('completion message generation error:', error);
       return {
-        message: "boom! that should work 🔥",
+        message: "boom! that should work",
         emotion: "confident",
         confidence: 0.3
       };
@@ -477,7 +477,7 @@ ONLY return the raw message text - no quotes, no explanations, just what they sh
         body: JSON.stringify({
           model: 'Meta-Llama-3.3-70B-Instruct',
           messages: [{ role: 'user', content: writePrompt }],
-          temperature: 0.8, // higher temp for more creative messages
+          temperature: 0.8, // highkey think this will write more creative messages
           max_tokens: 100,
           stream: false
         })
@@ -492,8 +492,8 @@ ONLY return the raw message text - no quotes, no explanations, just what they sh
 
       // clean up the message - remove quotes and explanations
       const cleanMessage = aiMessage
-        .replace(/^["']|["']$/g, '') // remove quotes at start/end
-        .replace(/^(here's|try this|send this):\s*/i, '') // remove prefixes
+        .replace(/^["']|["']$/g, '') 
+        .replace(/^(here's|try this|send this):\s*/i, '')
         .trim();
 
       return {
@@ -505,7 +505,7 @@ ONLY return the raw message text - no quotes, no explanations, just what they sh
     } catch (error) {
       console.error('message writing error:', error);
       return {
-        message: "having trouble crafting that perfect message right now 😅 try asking again?",
+        message: "having trouble crafting that perfect message right now... try asking again?",
         emotion: "confused",
         confidence: 0.3
       };
@@ -627,8 +627,11 @@ ${recentChat ? `Recent conversation:\n${recentChat}\n` : ''}User asked: "${reque
 Based on the profile photos and your conversation context, give a quick 2-3 sentence take. Write entirely in lowercase and be casual, honest, and helpful - like texting a friend. Keep the same chill, supportive tone as your other responses. Reference previous conversation if relevant.`;
 
       // only use the last 5 images to avoid token limits
+      // if you see this - blame sambanova for having one vision model
+      // and a tiny context window
+
       const imagesToAnalyze = request.images.slice(-5);
-      console.log(`Using ${imagesToAnalyze.length} of ${request.images.length} images for analysis`);
+      console.log(`using ${imagesToAnalyze.length} of ${request.images.length} images for analysis`);
       
       const messages = [
         { role: 'system', content: analysisPrompt },
@@ -644,7 +647,7 @@ Based on the profile photos and your conversation context, give a quick 2-3 sent
         }
       ];
 
-      console.log('Starting simple profile analysis:', {
+      console.log('starting simple profile analysis:', {
         model: 'Llama-4-Maverick-17B-128E-Instruct',
         userMessage: request.userMessage,
         imageCount: request.images.length
@@ -668,7 +671,7 @@ Based on the profile photos and your conversation context, give a quick 2-3 sent
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('Analysis API Error:', {
+        console.error('analysis api error:', {
           status: response.status,
           statusText: response.statusText,
           body: errorText
@@ -677,21 +680,21 @@ Based on the profile photos and your conversation context, give a quick 2-3 sent
       }
 
       const data = await response.json();
-      console.log('API Response structure:', JSON.stringify(data, null, 2));
+      console.log('api response structure:', JSON.stringify(data, null, 2));
       
       const aiMessage = data.choices?.[0]?.message?.content;
-      console.log('Extracted message:', aiMessage);
+      console.log('extracted message:', aiMessage);
 
       if (!aiMessage) {
-        console.log('No message found in response. Full data:', data);
+        console.log('no message found in response. full data:', data);
         throw new Error('no response from analysis');
       }
 
-      console.log('Analysis complete, message length:', aiMessage.length);
+      console.log('analysis complete, message length:', aiMessage.length);
       
       // get emotion for this analysis
       const emotion = await this.getEmotionForAnalysis(messages);
-      console.log('Emotion detected:', emotion);
+      console.log('emotion detected:', emotion);
       
       return {
         message: aiMessage,
@@ -702,7 +705,7 @@ Based on the profile photos and your conversation context, give a quick 2-3 sent
     } catch (error) {
       console.error('profile analysis error:', error);
       return {
-        message: "couldn't analyze the profile right now, but from what i can see, go with your gut! 😉",
+        message: "couldn't analyze the profile right now, but from what i can see, go with your gut!",
         emotion: "casual",
         confidence: 0.3
       };
@@ -711,7 +714,7 @@ Based on the profile photos and your conversation context, give a quick 2-3 sent
 
   private async getEmotionForAnalysis(messages: any[]): Promise<string> {
     try {
-      // Simple emotion detection request (non-streaming, JSON)
+      // simple emotion detection request (non-streaming, JSON)
       const emotionPrompt = `Based on the dating profile analysis you just provided, what emotion should the dating copilot mascot display? 
 
 Respond with just one word from these options: happy, excited, confident, thinking, analyzing, surprised, confused, disappointed, supportive, encouraging, flirty, romantic, chill, casual`;
@@ -737,7 +740,7 @@ Respond with just one word from these options: happy, excited, confident, thinki
       });
 
       if (!response.ok) {
-        console.warn('Emotion detection failed, using default');
+        console.warn('emotion detection failed, using default');
         return 'analyzing';
       }
 
@@ -750,7 +753,7 @@ Respond with just one word from these options: happy, excited, confident, thinki
       return validEmotions.includes(emotion) ? emotion : 'analyzing';
       
     } catch (error) {
-      console.warn('Emotion detection error:', error);
+      console.warn('emotion detection error:', error);
       return 'analyzing';
     }
   }
@@ -758,7 +761,7 @@ Respond with just one word from these options: happy, excited, confident, thinki
 
 
   private async nonStreamingAnalysis(messages: any[], request: ProfileAnalysisRequest): Promise<AIResponse> {
-    console.log('Trying non-streaming analysis...');
+    console.log('trying non-streaming analysis...');
     
     const response = await fetch(this.baseUrl, {
       method: 'POST',
@@ -777,7 +780,7 @@ Respond with just one word from these options: happy, excited, confident, thinki
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Non-streaming API Error:', {
+      console.error('non-streaming api error:', {
         status: response.status,
         statusText: response.statusText,
         body: errorText
@@ -832,9 +835,9 @@ Respond with just one word from these options: happy, excited, confident, thinki
     return 'casual';
   }
 
-  // validate api key format (more flexible for sambanova)
+  // validate api key format (this is useless rn)
   static isValidApiKey(key: string): boolean {
-    return !!(key && key.trim().length > 10); // just check it's not empty and has reasonable length
+    return !!(key && key.trim().length > 10); // just check it's not empty and has reasonable length LOL
   }
 }
 
@@ -842,14 +845,14 @@ Respond with just one word from these options: happy, excited, confident, thinki
 let aiService: AIService | null = null;
 
 export const initializeAI = (apiKey: string): boolean => {
-  console.log('Initializing AI with key:', apiKey ? `${apiKey.substring(0, 8)}...` : 'empty');
+  console.log('initializing ai with key:', apiKey ? `${apiKey.substring(0, 8)}...` : 'empty');
   
   if (AIService.isValidApiKey(apiKey)) {
     aiService = new AIService(apiKey.trim());
-    console.log('AI service initialized successfully');
+    console.log('ai service initialized successfully');
     return true;
   } else {
-    console.log('API key validation failed:', { 
+    console.log('api key validation failed:', { 
       hasKey: !!apiKey, 
       length: apiKey?.length, 
       trimmedLength: apiKey?.trim().length 

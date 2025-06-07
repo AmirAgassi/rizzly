@@ -1,4 +1,4 @@
-// bufo manager - handles dynamic loading and selection of mascot faces
+// bufo manager - handles dynamic loading and selection of cool bufo faces
 export interface BufoFace {
   name: string;
   path: string;
@@ -16,11 +16,11 @@ class BufoManager {
 
     try {
       // use webpack's require.context to load all files from bufopack
-      const context = require.context('../bufopack/', false, /\.(png|gif)$/);
+      const context = (require as any).context('../bufopack/', false, /\.(png|gif)$/);
       const bufoFiles = context.keys();
 
       // populate the bufo map
-      bufoFiles.forEach(filePath => {
+      bufoFiles.forEach((filePath: string) => {
         const fileName = filePath.replace('./', '').replace(/\.(png|gif)$/, '');
         const bufoModule = context(filePath);
         this.bufoMap.set(fileName, bufoModule.default || bufoModule);
@@ -94,5 +94,4 @@ class BufoManager {
   }
 }
 
-// singleton instance
 export const bufoManager = new BufoManager(); 

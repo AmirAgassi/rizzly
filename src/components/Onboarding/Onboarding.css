@@ -12,7 +12,6 @@ body {
   -moz-osx-font-smoothing: grayscale;
   overflow: hidden;
   background: transparent;
-  /* force hardware acceleration and prevent compositing issues */
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
   will-change: auto;
@@ -54,7 +53,7 @@ button, input, label {
   z-index: 1000;
 }
 
-/* macos-style progress bar */
+/* macos-style progress bar - this sucked ngl */
 .progress-bar-container {
   position: absolute;
   top: 1px;
@@ -133,7 +132,7 @@ button, input, label {
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
 } */
 
-/* main content area - centered and glassy */
+/* main content area */
 .onboarding-content {
   flex: 1;
   display: flex;
@@ -148,12 +147,11 @@ button, input, label {
   background: transparent;
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
-  /* aggressive clearing */
   contain: layout style paint;
   isolation: isolate;
 }
 
-/* typography - high contrast for glass */
+/* typography */
 .onboarding-card h1,
 .onboarding-card h2 {
   font-size: 26px;
@@ -183,7 +181,6 @@ button, input, label {
 .welcome-content {
   text-align: center;
   padding: 20px 0;
-  /* force hardware acceleration to prevent compositing issues */
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
   isolation: isolate;
@@ -214,7 +211,7 @@ button, input, label {
   text-align: center;
 }
 
-/* options - glass styling */
+/* options */
 .onboarding-options {
   display: flex;
   flex-direction: column;
@@ -279,7 +276,7 @@ button, input, label {
   -webkit-transform: translateZ(0);
 }
 
-/* Toggle switches - macOS style */
+/* toggle switches - i wish i used these cuz they're so nice */
 .toggle-container {
   display: flex;
   justify-content: space-between;
@@ -338,7 +335,6 @@ button, input, label {
   transform: translateX(22px);
 }
 
-/* Text input - glass style */
 input[type="text"] {
   width: 100%;
   padding: 16px 20px;
@@ -364,7 +360,6 @@ input[type="text"]:focus {
   box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.1);
 }
 
-/* Summary and launch boxes */
 .summary-box {
   background: rgba(255, 255, 255, 0.75);
   /* backdrop-filter: blur(20px); */
@@ -430,7 +425,7 @@ input[type="text"]:focus {
   line-height: 1.4;
 }
 
-/* Navigation - glass style */
+/* navigation */
 .navigation-buttons {
   display: flex;
   gap: 14px;
@@ -496,7 +491,6 @@ input[type="text"]:focus {
   box-shadow: none;
 }
 
-/* Responsive adjustments */
 @media (max-width: 1024px) {
   .onboarding-content {
     padding: 40px 60px 120px 60px;
@@ -531,14 +525,14 @@ input[type="text"]:focus {
   }
 }
 
-/* Focus states for accessibility */
+/* focus states for accessibility */
 button:focus-visible,
 input:focus-visible {
   outline: 2px solid #007aff;
   outline-offset: 2px;
 }
 
-/* Multi-select options for checkboxes */
+/* multi-select options for checkboxes */
 .multi-select-option {
   margin-bottom: 8px;
 }
@@ -569,7 +563,7 @@ input:focus-visible {
   filter: brightness(1.3);
 }
 
-/* Three column layout for options - responsive */
+/* three column layout for options - responsive */
 .onboarding-options.three-column {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -592,7 +586,7 @@ input:focus-visible {
   align-items: center;
 }
 
-/* Summary container */
+/* summary container */
 .summary-container {
   background: rgba(255, 255, 255, 0.05);
   border-radius: 12px;
@@ -626,7 +620,7 @@ input:focus-visible {
   margin-bottom: 4px;
 }
 
-/* Primary button styling */
+/* primary button styling */
 .next-button.primary {
   background: linear-gradient(135deg, #007AFF, #0051D0);
   color: white;
@@ -652,7 +646,6 @@ input:focus-visible {
   box-shadow: none;
 }
 
-/* Welcome content improvements */
 .welcome-content h1 {
   font-size: 32px;
   font-weight: 700;
@@ -667,7 +660,6 @@ input:focus-visible {
   line-height: 1.5;
   text-align: center;
   margin-top: 16px;
-  /* prevent compositing issues */
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
 } 

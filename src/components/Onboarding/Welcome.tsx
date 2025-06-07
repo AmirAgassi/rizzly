@@ -10,7 +10,7 @@ interface WelcomeProps {
 function Welcome({ data, updateData, onNext, onBack }: WelcomeProps) {
   return (
     <div className="onboarding-content">
-      <h2>Welcome to Rizzly!</h2>
+      <h2>Welcome to Rizzly.</h2>
       <p className="subtitle">
         Your AI-powered dating assistant that helps you connect with matches using your unique personality and style.
       </p>

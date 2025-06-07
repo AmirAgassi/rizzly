@@ -13,6 +13,7 @@ let mainWindow: BrowserWindow;
 let view: WebContentsView;
 let aiService: AIService | null = null;
 
+// create the main application window
 const createWindow = (): void => {
   mainWindow = new BrowserWindow({
     height: 680,
@@ -22,21 +23,19 @@ const createWindow = (): void => {
     transparent: true,
     backgroundColor: 'rgba(0,0,0,0)',
     resizable: false,
-    trafficLightPosition: { x: -100, y: -100 }, // Hide traffic lights completely
+    trafficLightPosition: { x: -100, y: -100 },
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
       nodeIntegration: false,
       contextIsolation: true,
       experimentalFeatures: false,
       offscreen: false,
-      enableBlinkFeatures: '', // disable potentially problematic features
-      disableBlinkFeatures: 'Accelerated2dCanvas,AcceleratedSmallCanvases', // force software rendering for problematic elements
+      enableBlinkFeatures: '',
+      disableBlinkFeatures: 'Accelerated2dCanvas,AcceleratedSmallCanvases',
     },
   });
 
   mainWindow.loadURL(MAIN_WINDOW_WEBPACK_ENTRY);
-
-  // mainWindow.webContents.openDevTools({ mode: 'detach' });
 };
 
 app.on('ready', createWindow);
@@ -53,11 +52,11 @@ app.on('activate', () => {
   }
 });
 
+// handle onboarding completion and setup browser view
 ipcMain.on('onboarding-complete', () => {
   console.log('onboarding done, creating browser view');
   if (!mainWindow) return;
 
-  // Resize window for the main app interface
   mainWindow.setSize(1200, 800);
   mainWindow.setResizable(true);
   mainWindow.center();
@@ -71,7 +70,7 @@ ipcMain.on('onboarding-complete', () => {
 
   const resizeView = () => {
     const [width, height] = mainWindow.getSize();
-    const debuggerPanelWidth = 420; // match the CSS width from MainApp.css
+    const debuggerPanelWidth = 420;
     if (view) {
       view.setBounds({ x: 0, y: 0, width: width - debuggerPanelWidth, height });
     }
@@ -81,35 +80,28 @@ ipcMain.on('onboarding-complete', () => {
   mainWindow.on('resize', resizeView);
 
   view.webContents.loadURL('https://tinder.com/app/recs');
-  // view.webContents.openDevTools({ mode: 'detach' });
 
-    // inject real-time message monitoring when page loads
+  // monitor for emergency message intervention
   view.webContents.on('did-finish-load', () => {
-    console.log('🔄 Browser view finished loading, setting up monitoring...');
-    
-         // instead of complex injection, let's use a simpler approach with periodic checking
-     let interventionInProgress = false;
-     
-     const startMonitoring = () => {
-       setInterval(async () => {
-         // skip if intervention is happening
-         if (interventionInProgress) {
-           console.log('⏸️ Skipping check - intervention in progress');
-           return;
-         }
+    console.log('browser view finished loading, setting up monitoring');
+    let interventionInProgress = false;
+
+    // periodically check for emergency messages
+    const startMonitoring = () => {
+      setInterval(async () => {
+        if (interventionInProgress) {
+          console.log('skipping check - intervention in progress');
+          return;
+        }
         try {
           const currentUrl = view.webContents.getURL();
-          
-          // only monitor on messages pages
           if (!currentUrl.includes('tinder.com/app/messages/')) {
             return;
           }
-          
-                     // get current textarea content
-           const result = await view.webContents.executeJavaScript(`
-             (() => {
-               const textarea = document.querySelector('textarea[placeholder*="Type a message"], textarea[placeholder*="message"]');
-               if (textarea && textarea.value && textarea.value.trim().length >= 3) {
+          const result = await view.webContents.executeJavaScript(`
+            (() => {
+              const textarea = document.querySelector('textarea[placeholder*="Type a message"], textarea[placeholder*="message"]');
+              if (textarea && textarea.value && textarea.value.trim().length >= 3) {
                 return {
                   found: true,
                   content: textarea.value.trim(),
@@ -119,147 +111,131 @@ ipcMain.on('onboarding-complete', () => {
               return { found: false };
             })();
           `);
-          
-                                if (result.found && result.content) {
-             // check if this message has already been checked recently
-             const cacheKey = 'emergency-' + result.content.substring(0, 10);
+
+          if (result.found && result.content) {
+            const cacheKey = 'emergency-' + result.content.substring(0, 10);
             const lastCheck = (global as any).emergencyCache?.[cacheKey] || 0;
             const now = Date.now();
-            
-            // only check if it's been more than 1 second since last check of this message  
+
             if (now - lastCheck > 1000) {
               if (!(global as any).emergencyCache) (global as any).emergencyCache = {};
               (global as any).emergencyCache[cacheKey] = now;
-              
-              console.log('🔍 Periodic check found message:', result.content + '...');
-               
-               // get onboarding data and chat history from main window's localStorage
-               const onboardingData = await mainWindow.webContents.executeJavaScript(
-                 `JSON.parse(localStorage.getItem('rizzly-preferences') || 'null')`
-               );
-               const chatHistory = await mainWindow.webContents.executeJavaScript(
-                 `JSON.parse(localStorage.getItem('rizzly-chat-history') || '[]')`
-               );
-              
-                             // run emergency check
-               if (aiService) {
-                 const emergencyResult = await aiService.detectEmergency(result.content, onboardingData, chatHistory);
-                 
-                 if (emergencyResult.isEmergency) {
-                   console.log('🚨 EMERGENCY INTERVENTION: DELETING MESSAGE');
-                   interventionInProgress = true; // block further checks
-                   console.log('🔒 Intervention lock set - blocking new checks');
-                   
-                   // send the actual LLM's horrified reaction first
-                   if (mainWindow) {
-                     mainWindow.webContents.send('emergency-alert', {
-                       ...emergencyResult,
-                       message: emergencyResult.message // use the LLM's actual disgusted/terrified response
-                     });
-                   }
-                   
-                   // disable textarea to prevent user from typing during deletion
-                   await view.webContents.executeJavaScript(`
-                     (() => {
-                       const textarea = document.querySelector('textarea[placeholder*="Type a message"], textarea[placeholder*="message"]');
-                       if (textarea) {
-                         textarea.disabled = true;
-                         textarea.style.opacity = '0.5';
-                         textarea.style.cursor = 'not-allowed';
-                         console.log('🚫 Textarea disabled for emergency deletion');
-                       }
-                     })();
-                   `);
-                   
-                   // start deleting the message character by character
-                   console.log(`🗑️ Starting character-by-character deletion...`);
-                   
-                   // keep deleting until textarea is completely empty
-                   let deletionAttempts = 0;
-                   const maxAttempts = 200; // safety limit
-                   
-                   while (deletionAttempts < maxAttempts) {
-                     const remainingLength = await view.webContents.executeJavaScript(`
-                       (() => {
-                         const textarea = document.querySelector('textarea[placeholder*="Type a message"], textarea[placeholder*="message"]');
-                         if (textarea && textarea.value.length > 0) {
-                           textarea.value = textarea.value.slice(0, -1);
-                           console.log('🗑️ Deleted character, remaining:', textarea.value.length);
-                           return textarea.value.length;
-                         }
-                         return 0;
-                       })();
-                     `);
-                     
-                     if (remainingLength === 0) {
-                       console.log('✅ Textarea completely cleared!');
-                       break;
-                     }
-                     
-                     await new Promise(resolve => setTimeout(resolve, 40)); // faster deletion
-                     deletionAttempts++;
-                   }
-                   
-                   console.log('✅ Message deletion complete');
-                   
-                   // re-enable textarea
-                   await view.webContents.executeJavaScript(`
-                     (() => {
-                       const textarea = document.querySelector('textarea[placeholder*="Type a message"], textarea[placeholder*="message"]');
-                       if (textarea) {
-                         textarea.disabled = false;
-                         textarea.style.opacity = '1';
-                         textarea.style.cursor = 'text';
-                         console.log('✅ Textarea re-enabled');
-                       }
-                     })();
-                   `);
-                   
-                   // generate custom LLM follow-up reaction
-                   if (mainWindow && aiService) {
-                     try {
-                       const followUpResult = await aiService.generateFollowUpReaction(result.content);
-                       
-                       mainWindow.webContents.send('emergency-alert', {
-                         message: followUpResult.message,
-                         emotion: followUpResult.emotion
-                       });
-                     } catch (followUpError) {
-                       console.error('Follow-up generation failed:', followUpError);
-                       // fallback message
-                       mainWindow.webContents.send('emergency-alert', {
-                         message: `crisis averted! that message was genuinely unhinged 😰`,
-                         emotion: 'shocked'
-                       });
-                     }
-                   }
-                   
-                   // extend cooldown and clear intervention flag after a delay
-                   (global as any).emergencyCache[cacheKey] = now + 60000; // 1 minute cooldown
-                   
-                   // wait a bit longer before allowing new interventions
-                   setTimeout(() => {
-                     interventionInProgress = false;
-                     console.log('✅ Intervention lock released');
-                   }, 2000); // 2 second buffer
-                 }
-               }
+
+              console.log('periodic check found message:', result.content);
+
+              const onboardingData = await mainWindow.webContents.executeJavaScript(
+                `JSON.parse(localStorage.getItem('rizzly-preferences') || 'null')`
+              );
+              const chatHistory = await mainWindow.webContents.executeJavaScript(
+                `JSON.parse(localStorage.getItem('rizzly-chat-history') || '[]')`
+              );
+
+              if (aiService) {
+                const emergencyResult = await aiService.detectEmergency(result.content, onboardingData, chatHistory);
+
+                if (emergencyResult.isEmergency) {
+                  console.log('emergency intervention: deleting message');
+                  interventionInProgress = true;
+                  console.log('intervention lock set - blocking new checks');
+
+                  if (mainWindow) {
+                    mainWindow.webContents.send('emergency-alert', {
+                      ...emergencyResult,
+                      message: emergencyResult.message
+                    });
+                  }
+
+                  await view.webContents.executeJavaScript(`
+                    (() => {
+                      const textarea = document.querySelector('textarea[placeholder*="Type a message"], textarea[placeholder*="message"]');
+                      if (textarea) {
+                        textarea.disabled = true;
+                        textarea.style.opacity = '0.5';
+                        textarea.style.cursor = 'not-allowed';
+                        console.log('textarea disabled for emergency deletion');
+                      }
+                    })();
+                  `);
+
+                  console.log('starting character-by-character deletion');
+
+                  let deletionAttempts = 0;
+                  const maxAttempts = 200;
+
+                  while (deletionAttempts < maxAttempts) {
+                    const remainingLength = await view.webContents.executeJavaScript(`
+                      (() => {
+                        const textarea = document.querySelector('textarea[placeholder*="Type a message"], textarea[placeholder*="message"]');
+                        if (textarea && textarea.value.length > 0) {
+                          textarea.value = textarea.value.slice(0, -1);
+                          console.log('deleted character, remaining:', textarea.value.length);
+                          return textarea.value.length;
+                        }
+                        return 0;
+                      })();
+                    `);
+
+                    if (remainingLength === 0) {
+                      console.log('textarea completely cleared');
+                      break;
+                    }
+
+                    await new Promise(resolve => setTimeout(resolve, 40));
+                    deletionAttempts++;
+                  }
+
+                  console.log('message deletion complete');
+
+                  await view.webContents.executeJavaScript(`
+                    (() => {
+                      const textarea = document.querySelector('textarea[placeholder*="Type a message"], textarea[placeholder*="message"]');
+                      if (textarea) {
+                        textarea.disabled = false;
+                        textarea.style.opacity = '1';
+                        textarea.style.cursor = 'text';
+                        console.log('textarea re-enabled');
+                      }
+                    })();
+                  `);
+
+                  if (mainWindow && aiService) {
+                    try {
+                      const followUpResult = await aiService.generateFollowUpReaction(result.content);
+
+                      mainWindow.webContents.send('emergency-alert', {
+                        message: followUpResult.message,
+                        emotion: followUpResult.emotion
+                      });
+                    } catch (followUpError) {
+                      console.error('follow-up generation failed:', followUpError);
+                      mainWindow.webContents.send('emergency-alert', {
+                        message: `crisis averted! that message was genuinely unhinged`,
+                        emotion: 'shocked'
+                      });
+                    }
+                  }
+
+                  (global as any).emergencyCache[cacheKey] = now + 60000;
+
+                  setTimeout(() => {
+                    interventionInProgress = false;
+                    console.log('intervention lock released');
+                  }, 2000);
+                }
+              }
             }
           }
-          
-                 } catch (error) {
-           // silently ignore errors to avoid spam
-         }
-       }, 100); // check every 100ms for ultra-fast detection
+        } catch (error) {
+          // ignore errors to avoid log spam
+        }
+      }, 100);
     };
-    
-    // start monitoring after a short delay
+
     setTimeout(startMonitoring, 3000);
   });
 
-  // handle file downloads
+  // handle file downloads for browser view
   view.webContents.session.on('will-download', (event: any, item: any, webContents: any) => {
-    // let's save to the user's downloads folder
     const downloadsPath = app.getPath('downloads');
     const fileName = item.getFilename();
     const savePath = path.join(downloadsPath, fileName);
@@ -275,7 +251,7 @@ ipcMain.on('onboarding-complete', () => {
           const received = item.getReceivedBytes();
           const total = item.getTotalBytes();
           if (total > 0) {
-            console.log(`> ${Math.round((received / total) * 100)}%`);
+            console.log(`progress: ${Math.round((received / total) * 100)}%`);
           }
         }
       }
@@ -291,6 +267,7 @@ ipcMain.on('onboarding-complete', () => {
   });
 });
 
+// handle navigation requests from renderer
 ipcMain.on('navigate-to', (event, url) => {
   if (view && url) {
     console.log(`navigating to: ${url}`);
@@ -298,14 +275,14 @@ ipcMain.on('navigate-to', (event, url) => {
   }
 });
 
+// log the current image url in the profile carousel
 ipcMain.on('log-current-image-url', (event) => {
   if (view) {
-    console.log('---');
-    console.log(`getting current image url...`);
+    console.log('logging current image url');
     const script = `
       (() => {
         const logs = [];
-        logs.push('--- finding profile and image ---');
+        logs.push('finding profile and image');
     
         const profileContainers = document.querySelectorAll('section[aria-roledescription="carousel"]');
         logs.push(\`found \${profileContainers.length} profile containers\`);
@@ -314,15 +291,13 @@ ipcMain.on('log-current-image-url', (event) => {
         for (const container of profileContainers) {
             const hasActiveTab = container.querySelector('button[role="tab"][aria-selected="true"]');
             const rect = container.getBoundingClientRect();
-            // a container is a candidate if it has an active tab and is positioned on-screen.
             if (hasActiveTab && rect.top >= 0) {
                 candidateContainers.push(container);
             }
         }
     
-        logs.push(\`found \${candidateContainers.length} candidates (on-screen w/ active tab).\`);
+        logs.push(\`found \${candidateContainers.length} candidates (on-screen w/ active tab)\`);
     
-        // if multiple candidates exist, the last one in the dom is the one on top.
         const currentProfileContainer = candidateContainers.length > 0 ? candidateContainers[candidateContainers.length - 1] : null;
     
         if (currentProfileContainer) {
@@ -367,18 +342,18 @@ ipcMain.on('log-current-image-url', (event) => {
       .then(logs => {
         logs.forEach((log: string) => console.log(log));
       })
-      .catch(err => console.error('Script execution failed:', err));
+      .catch(err => console.error('script execution failed:', err));
   }
 });
 
+// click the next photo button in the profile carousel
 ipcMain.on('click-next-photo', (event, selector) => {
   if (view && selector) {
-    console.log('---');
-    console.log(`clicking next photo...`);
+    console.log('clicking next photo');
     const script = `
       (() => {
         const logs = [];
-        logs.push('--- finding and clicking next photo ---');
+        logs.push('finding and clicking next photo');
 
         const profileContainers = document.querySelectorAll('section[aria-roledescription="carousel"]');
         let candidateContainers = [];
@@ -419,13 +394,14 @@ ipcMain.on('click-next-photo', (event, selector) => {
       .then(logs => {
         logs.forEach((log: string) => console.log(log));
       })
-      .catch(err => console.error('Script execution failed:', err));
+      .catch(err => console.error('script execution failed:', err));
   }
 });
 
+// check the status of emergency monitoring
 ipcMain.on('check-monitoring', (event) => {
   if (view) {
-    console.log('--- checking emergency monitoring status ---');
+    console.log('checking emergency monitoring status');
     const script = `
       (() => {
         const hasRizzlyMonitoring = !!document.querySelector('textarea[data-rizzly-monitored]');
@@ -447,16 +423,17 @@ ipcMain.on('check-monitoring', (event) => {
     `;
     view.webContents.executeJavaScript(script)
       .then(result => {
-        console.log('Monitoring status:', result);
-        console.log('--- end monitoring check ---');
+        console.log('monitoring status:', result);
+        console.log('end monitoring check');
       })
-      .catch(err => console.error('Monitoring check failed:', err));
+      .catch(err => console.error('monitoring check failed:', err));
   }
 });
 
+// debug the message textarea in the browser view
 ipcMain.on('debug-textarea', (event) => {
   if (view) {
-    console.log('--- debugging textarea content ---');
+    console.log('debugging textarea content');
     const script = `
       (() => {
         const textarea = document.querySelector('textarea[placeholder*="Type a message"], textarea[placeholder*="message"]');
@@ -472,7 +449,7 @@ ipcMain.on('debug-textarea', (event) => {
         } else {
           return {
             found: false,
-            message: 'No message textarea found on current page'
+            message: 'no message textarea found on current page'
           };
         }
       })();
@@ -480,34 +457,33 @@ ipcMain.on('debug-textarea', (event) => {
     view.webContents.executeJavaScript(script)
       .then(result => {
         if (result.found) {
-          console.log('Textarea found!');
-          console.log('Current content:', result.content || '(empty)');
-          console.log('Placeholder:', result.placeholder);
-          console.log('Max length:', result.maxLength);
-          console.log('ID:', result.id);
-          console.log('Classes:', result.classes);
+          console.log('textarea found');
+          console.log('current content:', result.content || '(empty)');
+          console.log('placeholder:', result.placeholder);
+          console.log('max length:', result.maxLength);
+          console.log('id:', result.id);
+          console.log('classes:', result.classes);
         } else {
           console.log(result.message);
         }
-        console.log('--- end debug ---');
+        console.log('end debug');
       })
-      .catch(err => console.error('Debug script execution failed:', err));
+      .catch(err => console.error('debug script execution failed:', err));
   }
 });
 
+// download all images for the current profile
 ipcMain.on('download-all-images', async () => {
   if (!view) return;
 
-  console.log('---');
-  console.log('starting download of all images for this profile...');
+  console.log('starting download of all images for this profile');
 
   const downloadedUrls = new Set<string>();
-  const MAX_IMAGES_PER_PROFILE = 20; // safe limit to prevent infinite loops
+  const MAX_IMAGES_PER_PROFILE = 20;
 
   for (let i = 0; i < MAX_IMAGES_PER_PROFILE; i++) {
-    console.log(`\n> iteration ${i + 1}:`);
+    console.log(`iteration ${i + 1}`);
     try {
-      // step 1: get current image url and check if the 'next' button is disabled.
       const stateResult: { url?: string; isEnd?: boolean; error?: string } = await view.webContents.executeJavaScript(`
         (() => {
           const getOnscreenProfile = () => {
@@ -553,9 +529,8 @@ ipcMain.on('download-all-images', async () => {
         break;
       }
 
-      // step 2: download the image if it's new.
       if (stateResult.url && !downloadedUrls.has(stateResult.url)) {
-        console.log(`found new image, downloading...`);
+        console.log('found new image, downloading');
         downloadedUrls.add(stateResult.url);
         view.webContents.downloadURL(stateResult.url);
       } else if (stateResult.url) {
@@ -564,14 +539,12 @@ ipcMain.on('download-all-images', async () => {
         console.log('could not find image url for this slide');
       }
 
-      // step 3: if it's the last image, break the loop.
       if (stateResult.isEnd) {
         console.log('next button disabled, must be the last image');
         break;
       }
 
-      // step 4: click the 'next photo' button.
-      console.log('clicking next photo...');
+      console.log('clicking next photo');
       await view.webContents.executeJavaScript(`
         (() => {
           const getOnscreenProfile = () => {
@@ -592,7 +565,6 @@ ipcMain.on('download-all-images', async () => {
         })();
       `);
 
-      // step 5: wait for the ui to update.
       await new Promise(resolve => setTimeout(resolve, 500));
 
     } catch (err) {
@@ -601,29 +573,30 @@ ipcMain.on('download-all-images', async () => {
     }
   }
 
-  console.log(`---`);
-  console.log(`finished profile. total unique images: ${downloadedUrls.size}`);
+  console.log('finished profile. total unique images:', downloadedUrls.size);
 });
 
 // ai service ipc handlers
+
+// handle ai initialization
 ipcMain.handle('ai:initialize', async (event, apiKey: string) => {
   try {
-    console.log('Main process: Initializing AI with key:', apiKey ? `${apiKey.substring(0, 8)}...` : 'empty');
-    
+    console.log('main process: initializing ai with key:', apiKey ? `${apiKey.substring(0, 8)}` : 'empty');
     if (AIService.isValidApiKey(apiKey)) {
       aiService = new AIService(apiKey.trim());
-      console.log('Main process: AI service initialized successfully');
+      console.log('main process: ai service initialized successfully');
       return { success: true };
     } else {
-      console.log('Main process: API key validation failed');
+      console.log('main process: api key validation failed');
       return { success: false, error: 'Invalid API key format' };
     }
   } catch (error) {
-    console.error('Main process: AI initialization error:', error);
+    console.error('main process: ai initialization error:', error);
     return { success: false, error: (error as Error).message || 'Unknown error' };
   }
 });
 
+// handle ai chat requests
 ipcMain.handle('ai:chat', async (event, userMessage: string, conversationHistory: any[], onboardingData?: any) => {
   try {
     if (!aiService) {
@@ -631,25 +604,25 @@ ipcMain.handle('ai:chat', async (event, userMessage: string, conversationHistory
         success: false, 
         error: 'AI service not initialized',
         fallback: { 
-          message: "ai isn't connected yet! add your api key in the debug panel 🔑", 
+          message: "ai isn't connected yet! add your api key in the debug panel", 
           emotion: "casual",
           confidence: 0.3
         }
       };
     }
 
-    console.log('Main process: Getting AI response for:', userMessage.substring(0, 50) + '...');
+    console.log('main process: getting ai response for:', userMessage.substring(0, 50));
     const response = await aiService.getChatResponse(userMessage, conversationHistory, onboardingData);
-    console.log('Main process: AI responded with emotion:', response.emotion);
+    console.log('main process: ai responded with emotion:', response.emotion);
     
     return { success: true, response };
   } catch (error) {
-    console.error('Main process: AI chat error:', error);
+    console.error('main process: ai chat error:', error);
     return { 
       success: false, 
       error: (error as Error).message || 'Unknown error',
       fallback: {
-        message: "oops, my brain hiccupped! 🤖 try asking again?",
+        message: "oops, my brain hiccupped! try asking again?",
         emotion: "confused",
         confidence: 0.3
       }
@@ -657,10 +630,12 @@ ipcMain.handle('ai:chat', async (event, userMessage: string, conversationHistory
   }
 });
 
+// handle ai connection status check
 ipcMain.handle('ai:status', async (event) => {
   return { isConnected: !!aiService };
 });
 
+// handle ai profile analysis
 ipcMain.handle('ai:analyze-profile', async (event, images: string[], userMessage: string, onboardingData: any, conversationHistory: any[]) => {
   try {
     if (!aiService) {
@@ -670,7 +645,7 @@ ipcMain.handle('ai:analyze-profile', async (event, images: string[], userMessage
       };
     }
 
-    console.log('Main process: Analyzing profile with', images.length, 'images and', conversationHistory?.length || 0, 'chat messages');
+    console.log('main process: analyzing profile with', images.length, 'images and', conversationHistory?.length || 0, 'chat messages');
     const response = await aiService.analyzeProfile({
       images,
       userMessage,
@@ -678,10 +653,10 @@ ipcMain.handle('ai:analyze-profile', async (event, images: string[], userMessage
       conversationHistory
     });
     
-    console.log('Main process: Analysis complete, response length:', response.message.length);
+    console.log('main process: analysis complete, response length:', response.message.length);
     return { success: true, response };
   } catch (error) {
-    console.error('Main process: Profile analysis error:', error);
+    console.error('main process: profile analysis error:', error);
     return { 
       success: false, 
       error: (error as Error).message || 'Unknown error' 
@@ -689,6 +664,7 @@ ipcMain.handle('ai:analyze-profile', async (event, images: string[], userMessage
   }
 });
 
+// handle ai message improvement
 ipcMain.handle('ai:improve-message', async (event, userRequest: string, onboardingData: any, conversationHistory: any[]) => {
   try {
     if (!aiService) {
@@ -705,7 +681,6 @@ ipcMain.handle('ai:improve-message', async (event, userRequest: string, onboardi
       };
     }
 
-    // first check if we're on the messages page
     const currentUrl: string = await view.webContents.executeJavaScript('window.location.href');
     if (!currentUrl.includes('tinder.com/app/messages')) {
       return {
@@ -714,7 +689,6 @@ ipcMain.handle('ai:improve-message', async (event, userRequest: string, onboardi
       };
     }
 
-    // get the current textarea content
     const textareaContent: { found: boolean; content?: string; error?: string } = await view.webContents.executeJavaScript(`
       (() => {
         const textarea = document.querySelector('textarea[placeholder*="Type a message"], textarea[placeholder*="message"]');
@@ -739,7 +713,7 @@ ipcMain.handle('ai:improve-message', async (event, userRequest: string, onboardi
       };
     }
 
-    console.log('Main process: Improving message:', textareaContent.content?.substring(0, 50) + '...');
+    console.log('main process: improving message:', textareaContent.content?.substring(0, 50));
     const response = await aiService.improveMessage(
       textareaContent.content || '',
       userRequest,
@@ -747,10 +721,10 @@ ipcMain.handle('ai:improve-message', async (event, userRequest: string, onboardi
       conversationHistory
     );
     
-    console.log('Main process: Message improvement complete');
+    console.log('main process: message improvement complete');
     return { success: true, response, originalMessage: textareaContent.content };
   } catch (error) {
-    console.error('Main process: Message assistance error:', error);
+    console.error('main process: message assistance error:', error);
     return { 
       success: false, 
       error: (error as Error).message || 'Unknown error' 
@@ -758,6 +732,7 @@ ipcMain.handle('ai:improve-message', async (event, userRequest: string, onboardi
   }
 });
 
+// handle ai emergency check
 ipcMain.handle('ai:emergency-check', async (event, currentMessage: string, onboardingData: any, conversationHistory: any[]) => {
   try {
     if (!aiService) {
@@ -768,22 +743,20 @@ ipcMain.handle('ai:emergency-check', async (event, currentMessage: string, onboa
       return { success: false, isEmergency: false };
     }
 
-    // check if we're on messages page
     const currentUrl: string = await view.webContents.executeJavaScript('window.location.href');
     if (!currentUrl.includes('tinder.com/app/messages/')) {
       return { success: false, isEmergency: false };
     }
 
-    // skip empty or very short messages
     if (!currentMessage || currentMessage.trim().length < 5) {
       return { success: true, isEmergency: false };
     }
 
-    console.log('Emergency check for:', currentMessage.substring(0, 30) + '...');
+    console.log('emergency check for:', currentMessage.substring(0, 30));
     const result = await aiService.detectEmergency(currentMessage, onboardingData, conversationHistory);
     
     if (result.isEmergency) {
-      console.log('🚨 EMERGENCY DETECTED:', currentMessage);
+      console.log('emergency detected:', currentMessage);
     }
     
     return { 
@@ -792,19 +765,20 @@ ipcMain.handle('ai:emergency-check', async (event, currentMessage: string, onboa
       response: result.isEmergency ? result : undefined
     };
   } catch (error) {
-    console.error('Emergency check error:', error);
+    console.error('emergency check error:', error);
     return { success: false, isEmergency: false };
   }
 });
 
+// forward emergency alert to main window
 ipcMain.on('emergency-alert', (event, response) => {
-  console.log('🚨 Emergency alert received:', response);
-  // forward the emergency alert to the main window
+  console.log('emergency alert received:', response);
   if (mainWindow) {
     mainWindow.webContents.send('emergency-alert', response);
   }
 });
 
+// handle ai message writing
 ipcMain.handle('ai:write-message', async (event, userRequest: string, onboardingData: any, conversationHistory: any[]) => {
   try {
     if (!aiService) {
@@ -821,7 +795,6 @@ ipcMain.handle('ai:write-message', async (event, userRequest: string, onboarding
       };
     }
 
-    // first check if we're on the messages page
     const currentUrl: string = await view.webContents.executeJavaScript('window.location.href');
     if (!currentUrl.includes('tinder.com/app/messages')) {
       return {
@@ -830,17 +803,17 @@ ipcMain.handle('ai:write-message', async (event, userRequest: string, onboarding
       };
     }
 
-    console.log('Main process: Writing message for user request:', userRequest);
+    console.log('main process: writing message for user request:', userRequest);
     const response = await aiService.writeMessage(
       userRequest,
       onboardingData,
       conversationHistory
     );
     
-    console.log('Main process: Message writing complete');
+    console.log('main process: message writing complete');
     return { success: true, response };
   } catch (error) {
-    console.error('Main process: Message writing error:', error);
+    console.error('main process: message writing error:', error);
     return { 
       success: false, 
       error: (error as Error).message || 'Unknown error' 
@@ -848,6 +821,7 @@ ipcMain.handle('ai:write-message', async (event, userRequest: string, onboarding
   }
 });
 
+// handle ai completion message generation
 ipcMain.handle('ai:generate-completion', async (event, writtenMessage: string, userRequest: string, onboardingData: any) => {
   try {
     if (!aiService) {
@@ -857,17 +831,17 @@ ipcMain.handle('ai:generate-completion', async (event, writtenMessage: string, u
       };
     }
 
-    console.log('Main process: Generating completion message for:', writtenMessage.substring(0, 30) + '...');
+    console.log('main process: generating completion message for:', writtenMessage.substring(0, 30));
     const response = await aiService.generateCompletionMessage(
       writtenMessage,
       userRequest,
       onboardingData
     );
     
-    console.log('Main process: Completion message generated');
+    console.log('main process: completion message generated');
     return { success: true, response };
   } catch (error) {
-    console.error('Main process: Completion generation error:', error);
+    console.error('main process: completion generation error:', error);
     return { 
       success: false, 
       error: (error as Error).message || 'Unknown error' 
@@ -875,6 +849,7 @@ ipcMain.handle('ai:generate-completion', async (event, writtenMessage: string, u
   }
 });
 
+// type a message in the browser view
 ipcMain.handle('type-message', async (event, message: string) => {
   try {
     if (!view) {
@@ -884,7 +859,6 @@ ipcMain.handle('type-message', async (event, message: string) => {
       };
     }
 
-    // check if we're on the messages page
     const currentUrl: string = await view.webContents.executeJavaScript('window.location.href');
     if (!currentUrl.includes('tinder.com/app/messages')) {
       return {
@@ -893,9 +867,8 @@ ipcMain.handle('type-message', async (event, message: string) => {
       };
     }
 
-    console.log('Main process: Starting to type message:', message.substring(0, 30) + '...');
+    console.log('main process: starting to type message:', message.substring(0, 30));
     
-    // first clear the textarea
     await view.webContents.executeJavaScript(`
       (() => {
         const textarea = document.querySelector('textarea[placeholder*="Type a message"], textarea[placeholder*="message"]');
@@ -907,7 +880,6 @@ ipcMain.handle('type-message', async (event, message: string) => {
       })();
     `);
 
-    // type character by character with delays
     for (let i = 0; i < message.length; i++) {
       const char = message[i];
       
@@ -921,14 +893,13 @@ ipcMain.handle('type-message', async (event, message: string) => {
         })();
       `);
       
-      // delay between characters (faster than deletion)
       await new Promise(resolve => setTimeout(resolve, 30 + Math.random() * 20));
     }
     
-    console.log('Main process: Message typing complete');
+    console.log('main process: message typing complete');
     return { success: true };
   } catch (error) {
-    console.error('Main process: Message typing error:', error);
+    console.error('main process: message typing error:', error);
     return { 
       success: false, 
       error: (error as Error).message || 'Unknown error' 
@@ -936,18 +907,17 @@ ipcMain.handle('type-message', async (event, message: string) => {
   }
 });
 
-// enhanced download with progress tracking
+// download profile images with progress tracking
 ipcMain.handle('download-profile-images', async (event) => {
   if (!view) return { success: false, error: 'No view available' };
 
-  console.log('Starting profile image download with progress tracking...');
+  console.log('starting profile image download with progress tracking');
   
   const images: string[] = [];
   const MAX_IMAGES = 10;
 
   try {
     for (let i = 0; i < MAX_IMAGES; i++) {
-      // get current image url
       const result: { url?: string; isEnd?: boolean; error?: string } = await view.webContents.executeJavaScript(`
         (() => {
           const getOnscreenProfile = () => {
@@ -993,14 +963,12 @@ ipcMain.handle('download-profile-images', async (event) => {
         continue;
       }
 
-      // download image as base64
       try {
         const imageResponse = await fetch(result.url);
         const imageBuffer = await imageResponse.arrayBuffer();
         const base64Image = Buffer.from(imageBuffer).toString('base64');
         images.push(base64Image);
         
-        // notify renderer of progress
         event.sender.send('download-progress', { 
           imageCount: images.length, 
           imageUrl: result.url,
@@ -1008,14 +976,13 @@ ipcMain.handle('download-profile-images', async (event) => {
           isComplete: false 
         });
         
-        console.log(`Downloaded image ${images.length}: ${result.url}`);
+        console.log(`downloaded image ${images.length}: ${result.url}`);
       } catch (downloadError) {
-        console.error('Failed to download image:', downloadError);
+        console.error('failed to download image:', downloadError);
       }
 
       if (result.isEnd) break;
 
-      // click next photo
       await view.webContents.executeJavaScript(`
         (() => {
           const getOnscreenProfile = () => {
@@ -1029,31 +996,30 @@ ipcMain.handle('download-profile-images', async (event) => {
           
           const nextButton = container.querySelector('button[aria-label="Next Photo"]');
           if (nextButton && !nextButton.disabled) {
-            console.log('Clicking next photo button');
+            console.log('clicking next photo button');
             const clickEvent = new MouseEvent('click', { bubbles: true, cancelable: true, view: window });
             const mousedownEvent = new MouseEvent('mousedown', { bubbles: true, cancelable: true, view: window });
             nextButton.dispatchEvent(mousedownEvent);
             nextButton.dispatchEvent(clickEvent);
           } else {
-            console.log('Next button not found or disabled');
+            console.log('next button not found or disabled');
           }
         })();
       `);
 
-      await new Promise(resolve => setTimeout(resolve, 1200));
+      await new Promise(resolve => setTimeout(resolve, 600));
     }
 
-    // notify completion
     event.sender.send('download-progress', { 
       imageCount: images.length, 
       isComplete: true 
     });
 
-    console.log(`Profile download complete: ${images.length} images`);
+    console.log(`profile download complete: ${images.length} images`);
     return { success: true, images, count: images.length };
 
   } catch (error) {
-    console.error('Profile download error:', error);
+    console.error('profile download error:', error);
     return { success: false, error: (error as Error).message || 'Unknown error' };
   }
 });
