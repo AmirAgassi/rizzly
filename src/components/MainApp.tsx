@@ -296,16 +296,7 @@ function MainApp() {
       } else if (responseData.toolCall && responseData.toolCall.name === 'message_assistance') {
         console.log('AI requested message assistance tool');
         
-        // show ai response first
-        const initialResponse = {
-          type: 'mascot',
-          message: responseData.message,
-          timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-          bufoFace: responseData.emotion
-        };
-        setChatHistory(prev => [...prev, initialResponse]);
-        
-        // start message improvement
+        // start message improvement immediately, don't show initial response
         setIsTyping(true);
         
         try {
@@ -316,30 +307,16 @@ function MainApp() {
           );
           
           if (assistanceResult.success && assistanceResult.response) {
-            // create improvement message
+            // just show the feedback, no need to repeat their draft
+            const fullMessage = assistanceResult.response.message;
+            
             const improvementMessage = {
               type: 'mascot',
-              message: assistanceResult.response.message,
+              message: fullMessage,
               timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
               bufoFace: assistanceResult.response.emotion
             };
             setChatHistory(prev => [...prev, improvementMessage]);
-            
-            // show original message if it was found
-            if (assistanceResult.originalMessage) {
-              const originalMessageDisplay = {
-                type: 'mascot',
-                message: `your current draft: "${assistanceResult.originalMessage}"`,
-                timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-                bufoFace: 'thinking'
-              };
-              setChatHistory(prev => {
-                const updated = [...prev];
-                // insert the original message before the improvement advice
-                updated.splice(-1, 0, originalMessageDisplay);
-                return updated;
-              });
-            }
             
             // update bufo based on assistance emotion
             if (bufoManager.isLoaded()) {
