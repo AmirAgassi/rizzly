@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   aiAnalyzeProfile: (images: string[], userMessage: string, onboardingData: any, conversationHistory: any[]) => ipcRenderer.invoke('ai:analyze-profile', images, userMessage, onboardingData, conversationHistory),
   aiImproveMessage: (userRequest: string, onboardingData: any, conversationHistory: any[]) => ipcRenderer.invoke('ai:improve-message', userRequest, onboardingData, conversationHistory),
   aiWriteMessage: (userRequest: string, onboardingData: any, conversationHistory: any[]) => ipcRenderer.invoke('ai:write-message', userRequest, onboardingData, conversationHistory),
+  aiGenerateCompletion: (writtenMessage: string, userRequest: string, onboardingData: any) => ipcRenderer.invoke('ai:generate-completion', writtenMessage, userRequest, onboardingData),
   aiEmergencyCheck: (currentMessage: string, onboardingData: any, conversationHistory: any[]) => ipcRenderer.invoke('ai:emergency-check', currentMessage, onboardingData, conversationHistory),
   sendEmergencyAlert: (response: any) => ipcRenderer.send('emergency-alert', response),
   typeMessage: (message: string) => ipcRenderer.invoke('type-message', message),

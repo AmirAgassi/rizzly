@@ -58,6 +58,11 @@ TOOL CALLS: Use tool calls for two specific scenarios:
 - "how would you write it then?", "what would you say?", "write something for me"
 - "fine, you write it", "show me how it's done", "give me a message to send"
 
+IMPORTANT: For message writing requests, DON'T give examples or say "let's try something like..." - just acknowledge that you'll write it for them. Examples:
+- "bet, let me write something good for you"
+- "on it! writing you something that'll work"
+- "alright, cooking up the perfect message"
+
 DO NOT use tool calls for general questions like "do I have a shot?", "thoughts about her?", "what's she like?"
 
 When triggered, include:
@@ -354,6 +359,77 @@ Response format: {"message": "your reaction", "emotion": "shocked/relieved/conce
       };
     }
   }
+c
+  // generate completion message after writing
+  async generateCompletionMessage(writtenMessage: string, userRequest: string, onboardingData?: any): Promise<AIResponse> {
+    try {
+      const completionPrompt = `You just successfully wrote and typed a message for the user on Tinder: "${writtenMessage}"
+
+User's original request was: "${userRequest}"
+
+Give a SHORT, celebratory response (1-2 sentences max) that:
+- Celebrates the success
+- Shows confidence it will work
+- Matches your casual, lowercase style
+- Uses appropriate emoji
+
+Examples:
+- "boom! that's how you start a conversation"
+- "nice and smooth - should get them talking"
+- "there we go! classic opener that actually works"
+
+Response format: {"message": "your response", "emotion": "flirty/confident/excited"}`;
+
+      const response = await fetch(this.baseUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'Meta-Llama-3.3-70B-Instruct',
+          messages: [{ role: 'user', content: completionPrompt }],
+          temperature: 0.8,
+          max_tokens: 80,
+          stream: false
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`ai api error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const aiMessage = data.choices?.[0]?.message?.content;
+
+      // try to parse json response
+      try {
+        const jsonMatch = aiMessage.match(/\{[^}]*"message"[^}]*\}/);
+        const jsonString = jsonMatch ? jsonMatch[0] : aiMessage;
+        const parsed = JSON.parse(jsonString);
+        
+        return {
+          message: parsed.message || aiMessage,
+          emotion: parsed.emotion || 'confident',
+          confidence: 0.8
+        };
+      } catch (parseError) {
+        return {
+          message: aiMessage.replace(/\{.*\}/, '').trim(),
+          emotion: 'confident',
+          confidence: 0.6
+        };
+      }
+
+    } catch (error) {
+      console.error('completion message generation error:', error);
+      return {
+        message: "boom! that should work 🔥",
+        emotion: "confident",
+        confidence: 0.3
+      };
+    }
+  }
 
   // write a message for the user
   async writeMessage(userRequest: string, onboardingData?: any, conversationHistory?: any[]): Promise<AIResponse> {
@@ -363,7 +439,7 @@ Response format: {"message": "your reaction", "emotion": "shocked/relieved/conce
         `${msg.type === 'user' ? 'user' : 'you'}: ${msg.message}`
       ).join('\n') || '';
 
-      const writePrompt = `You are a dating copilot who will write a perfect message for the user to send. Here's the context:
+      const writePrompt = `You are a dating copilot writing the PERFECT message for this specific situation. Context:
 
 User's dating goals: ${onboardingData?.primaryGoal || 'not specified'}
 Communication style: ${onboardingData?.communicationStyle?.join(', ') || 'not specified'}
@@ -373,15 +449,24 @@ ${recentChat ? `Recent conversation:\n${recentChat}\n` : ''}
 
 User's request: "${userRequest}"
 
-Based on their style and the conversation, write ONE single message they should send. Make it:
-- Natural and matches their personality
-- Engaging and likely to get a response
-- Not too long or intense
-- Appropriate for the context
+Write ONE single message that's:
+- CREATIVE and unexpected (avoid cliché openers)
+- Matches their request tone (flirty/casual/funny/etc)
+- Unique - not something everyone uses
+- Engaging and conversation-starting
+- Uses their interests/personality
 
-ONLY return the message they should send - nothing else. no quotes around it, no explanations, just the raw message text they can copy and send.
+Message styles to vary between:
+- Playful observations ("you look like you'd steal my hoodies")
+- Genuine questions ("what's something you're obsessed with lately?")
+- Fun hypotheticals ("if you could only eat one food forever...")
+- Witty comments about their photos/bio
+- Creative compliments (not just "you're beautiful")
+- Humorous scenarios or jokes
 
-Write entirely in lowercase to match their casual style.`;
+CRITICAL: Be UNPREDICTABLE. Don't use formulaic patterns. Make each message feel fresh and spontaneous.
+
+ONLY return the raw message text - no quotes, no explanations, just what they should send.`;
 
       const response = await fetch(this.baseUrl, {
         method: 'POST',

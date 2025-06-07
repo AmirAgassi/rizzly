@@ -14,6 +14,7 @@ export interface IElectronAPI {
   aiAnalyzeProfile: (images: string[], userMessage: string, onboardingData: any, conversationHistory: any[]) => Promise<{ success: boolean; response?: any; error?: string }>;
   aiImproveMessage: (userRequest: string, onboardingData: any, conversationHistory: any[]) => Promise<{ success: boolean; response?: any; originalMessage?: string; error?: string }>;
   aiWriteMessage: (userRequest: string, onboardingData: any, conversationHistory: any[]) => Promise<{ success: boolean; response?: any; error?: string }>;
+  aiGenerateCompletion: (writtenMessage: string, userRequest: string, onboardingData: any) => Promise<{ success: boolean; response?: any; error?: string }>;
   aiEmergencyCheck: (currentMessage: string, onboardingData: any, conversationHistory: any[]) => Promise<{ success: boolean; isEmergency: boolean; response?: any }>;
   sendEmergencyAlert: (response: any) => void;
   typeMessage: (message: string) => Promise<{ success: boolean; error?: string }>;

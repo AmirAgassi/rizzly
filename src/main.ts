@@ -148,6 +148,7 @@ ipcMain.on('onboarding-complete', () => {
                  if (emergencyResult.isEmergency) {
                    console.log('🚨 EMERGENCY INTERVENTION: DELETING MESSAGE');
                    interventionInProgress = true; // block further checks
+                   console.log('🔒 Intervention lock set - blocking new checks');
                    
                    // send the actual LLM's horrified reaction first
                    if (mainWindow) {
@@ -195,7 +196,7 @@ ipcMain.on('onboarding-complete', () => {
                        break;
                      }
                      
-                     await new Promise(resolve => setTimeout(resolve, 80)); // dramatic effect
+                     await new Promise(resolve => setTimeout(resolve, 40)); // faster deletion
                      deletionAttempts++;
                    }
                    
@@ -840,6 +841,33 @@ ipcMain.handle('ai:write-message', async (event, userRequest: string, onboarding
     return { success: true, response };
   } catch (error) {
     console.error('Main process: Message writing error:', error);
+    return { 
+      success: false, 
+      error: (error as Error).message || 'Unknown error' 
+    };
+  }
+});
+
+ipcMain.handle('ai:generate-completion', async (event, writtenMessage: string, userRequest: string, onboardingData: any) => {
+  try {
+    if (!aiService) {
+      return { 
+        success: false, 
+        error: 'AI service not initialized' 
+      };
+    }
+
+    console.log('Main process: Generating completion message for:', writtenMessage.substring(0, 30) + '...');
+    const response = await aiService.generateCompletionMessage(
+      writtenMessage,
+      userRequest,
+      onboardingData
+    );
+    
+    console.log('Main process: Completion message generated');
+    return { success: true, response };
+  } catch (error) {
+    console.error('Main process: Completion generation error:', error);
     return { 
       success: false, 
       error: (error as Error).message || 'Unknown error' 

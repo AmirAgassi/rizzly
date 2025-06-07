@@ -380,19 +380,19 @@ function MainApp() {
       } else if (responseData.toolCall && responseData.toolCall.name === 'message_writing') {
         console.log('AI requested message writing tool');
         
-        // first show bufo's response acknowledging the request
+        // show bufo's natural response first (let AI generate the acknowledgment)
         const writingMessage = {
           type: 'mascot',
-          message: 'alright, let me write something for you... 🤔',
+          message: responseData.message, // use the AI's actual response
           timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-          bufoFace: 'thinking'
+          bufoFace: responseData.emotion
         };
         setChatHistory(prev => [...prev, writingMessage]);
         
-        // update bufo to thinking
+        // update bufo based on AI emotion
         if (bufoManager.isLoaded()) {
-          const thinkingBufoImage = bufoManager.getBufoByEmotion('thinking');
-          if (thinkingBufoImage) setBufoImage(thinkingBufoImage);
+          const bufoImage = bufoManager.getBufoByEmotion(responseData.emotion);
+          if (bufoImage) setBufoImage(bufoImage);
         }
         
         setIsTyping(true);
@@ -412,19 +412,36 @@ function MainApp() {
               try {
                 await window.electronAPI.typeMessage(generatedMessage);
                 
-                // show completion message
-                const completeMessage = {
-                  type: 'mascot',
-                  message: 'there you go! that should get their attention 😏',
-                  timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
-                  bufoFace: 'flirty'
-                };
-                setChatHistory(prev => [...prev, completeMessage]);
+                // generate dynamic completion message
+                const completionResult = await window.electronAPI.aiGenerateCompletion(
+                  generatedMessage,
+                  originalMessage,
+                  onboardingData
+                );
                 
-                // update bufo to flirty
-                if (bufoManager.isLoaded()) {
-                  const flirtyBufoImage = bufoManager.getBufoByEmotion('flirty');
-                  if (flirtyBufoImage) setBufoImage(flirtyBufoImage);
+                if (completionResult.success && completionResult.response) {
+                  const completeMessage = {
+                    type: 'mascot',
+                    message: completionResult.response.message,
+                    timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    bufoFace: completionResult.response.emotion
+                  };
+                  setChatHistory(prev => [...prev, completeMessage]);
+                  
+                  // update bufo based on completion emotion
+                  if (bufoManager.isLoaded()) {
+                    const completionBufoImage = bufoManager.getBufoByEmotion(completionResult.response.emotion);
+                    if (completionBufoImage) setBufoImage(completionBufoImage);
+                  }
+                } else {
+                  // fallback if completion generation fails
+                  const completeMessage = {
+                    type: 'mascot',
+                    message: 'done! 🔥',
+                    timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                    bufoFace: 'confident'
+                  };
+                  setChatHistory(prev => [...prev, completeMessage]);
                 }
                 
               } catch (typeError) {
