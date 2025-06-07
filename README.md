@@ -1,4 +1,4 @@
-# 🐸 rizzly - your ai dating wingman
+<img width="1255" alt="image" src="https://github.com/user-attachments/assets/c02bab05-bacb-4704-bb9a-0e2ccc06f617" /># 🐸 rizzly - your ai dating wingman
 
 <div align="center">
   <img src="src/bufopack/bufo-tea.png" alt="bufo mascot" width="120" height="120">
@@ -53,6 +53,7 @@ cd rizzly
 npm install 
 npm start
 ```
+<img width="1255" alt="image" src="https://github.com/user-attachments/assets/0f991390-9e96-47ea-86c9-7866cb1a8ef4" />
 
 complete the onboarding process to set your preferences, add your api key in the settings, and begin receiving personalized dating assistance from bufo.
 
