@@ -10,4 +10,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   clickNextPhoto: (selector: string) => ipcRenderer.send('click-next-photo', selector),
   downloadAllImages: () => ipcRenderer.send('download-all-images'),
   resizeWindow: (width: number, height: number) => ipcRenderer.send('resize-window', { width, height }),
+  // ai service methods
+  aiInitialize: (apiKey: string) => ipcRenderer.invoke('ai:initialize', apiKey),
+  aiChat: (userMessage: string, conversationHistory: any[]) => ipcRenderer.invoke('ai:chat', userMessage, conversationHistory),
+  aiStatus: () => ipcRenderer.invoke('ai:status'),
 });

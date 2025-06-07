@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, WebContentsView, session } from 'electron';
+import { AIService } from './services/AIService';
 import path from 'path';
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
@@ -10,6 +11,7 @@ if (require('electron-squirrel-startup')) {
 
 let mainWindow: BrowserWindow;
 let view: WebContentsView;
+let aiService: AIService | null = null;
 
 const createWindow = (): void => {
   mainWindow = new BrowserWindow({
@@ -355,4 +357,60 @@ ipcMain.on('download-all-images', async () => {
 
   console.log(`---`);
   console.log(`finished profile. total unique images: ${downloadedUrls.size}`);
+});
+
+// ai service ipc handlers
+ipcMain.handle('ai:initialize', async (event, apiKey: string) => {
+  try {
+    console.log('Main process: Initializing AI with key:', apiKey ? `${apiKey.substring(0, 8)}...` : 'empty');
+    
+    if (AIService.isValidApiKey(apiKey)) {
+      aiService = new AIService(apiKey.trim());
+      console.log('Main process: AI service initialized successfully');
+      return { success: true };
+    } else {
+      console.log('Main process: API key validation failed');
+      return { success: false, error: 'Invalid API key format' };
+    }
+  } catch (error) {
+    console.error('Main process: AI initialization error:', error);
+    return { success: false, error: (error as Error).message || 'Unknown error' };
+  }
+});
+
+ipcMain.handle('ai:chat', async (event, userMessage: string, conversationHistory: any[]) => {
+  try {
+    if (!aiService) {
+      return { 
+        success: false, 
+        error: 'AI service not initialized',
+        fallback: { 
+          message: "ai isn't connected yet! add your api key in the debug panel 🔑", 
+          emotion: "casual",
+          confidence: 0.3
+        }
+      };
+    }
+
+    console.log('Main process: Getting AI response for:', userMessage.substring(0, 50) + '...');
+    const response = await aiService.getChatResponse(userMessage, conversationHistory);
+    console.log('Main process: AI responded with emotion:', response.emotion);
+    
+    return { success: true, response };
+  } catch (error) {
+    console.error('Main process: AI chat error:', error);
+    return { 
+      success: false, 
+      error: (error as Error).message || 'Unknown error',
+      fallback: {
+        message: "oops, my brain hiccupped! 🤖 try asking again?",
+        emotion: "confused",
+        confidence: 0.3
+      }
+    };
+  }
+});
+
+ipcMain.handle('ai:status', async (event) => {
+  return { isConnected: !!aiService };
 });

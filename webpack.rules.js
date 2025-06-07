@@ -28,7 +28,10 @@ module.exports = [
     use: [{ loader: 'style-loader' }, { loader: 'css-loader' }],
   },
   {
-    test: /\.(png|jpe?g|gif|svg|ico)$/i,
+    test: /\.(png|jpe?g|gif|svg|ico|webp)$/i,
     type: 'asset/resource',
+    generator: {
+      filename: 'assets/[name][ext]'
+    }
   },
 ]; 

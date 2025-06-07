@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import './MainApp.css';
-// Import the mascot
+import { bufoManager } from './BufoManager';
+// fallback mascot
 import bufoTea from '../bufopack/bufo-tea.png';
 
 function MainApp() {
@@ -8,13 +9,86 @@ function MainApp() {
   const [url, setUrl] = useState('https://tinder.com/app/recs');
   const [nextButtonSelector] = useState('button[aria-label="Next Photo"]');
   const [chatMessage, setChatMessage] = useState('');
+  const [currentBufo, setCurrentBufo] = useState('bufo-tea');
+  const [bufoImage, setBufoImage] = useState(bufoTea); // fallback while loading
+  const [apiKey, setApiKey] = useState(localStorage.getItem('sambanova-api-key') || '');
+  const [isAIConnected, setIsAIConnected] = useState(false);
+  const [isTyping, setIsTyping] = useState(false);
   const [chatHistory, setChatHistory] = useState([
     {
       type: 'mascot',
       message: 'hey there! i\'m your dating copilot. ready to level up your game? ☕',
-      timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+      timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+      bufoFace: 'bufo-tea'
     }
   ]);
+  const chatMessagesRef = useRef<HTMLDivElement>(null);
+
+  // initialize bufo manager and ai on component mount
+  useEffect(() => {
+    const initBufos = async () => {
+      await bufoManager.loadAllBufos();
+      if (bufoManager.isLoaded()) {
+        const teaBufo = bufoManager.getBufo('bufo-tea');
+        if (teaBufo) setBufoImage(teaBufo);
+      }
+    };
+    initBufos();
+    
+    // initialize ai if api key exists
+    if (apiKey) {
+      const checkAI = async () => {
+        const result = await window.electronAPI.aiInitialize(apiKey);
+        setIsAIConnected(result.success);
+      };
+      checkAI();
+    }
+  }, []);
+
+  // handle api key changes
+  const handleApiKeyUpdate = async (newKey: string) => {
+    console.log('Updating API key, length:', newKey.length);
+    setApiKey(newKey);
+    localStorage.setItem('sambanova-api-key', newKey);
+    
+    if (newKey) {
+      const result = await window.electronAPI.aiInitialize(newKey);
+      console.log('AI initialization result:', result.success);
+      setIsAIConnected(result.success);
+      
+      if (result.success) {
+        const successMessage = {
+          type: 'mascot',
+          message: 'awesome! ai is connected and ready to help with your dating game! 🚀',
+          timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+          bufoFace: 'excited'
+        };
+        setChatHistory(prev => [...prev, successMessage]);
+        
+        if (bufoManager.isLoaded()) {
+          const excitedBufo = bufoManager.getBufoByEmotion('excited');
+          if (excitedBufo) setBufoImage(excitedBufo);
+        }
+      } else {
+        const failMessage = {
+          type: 'mascot',
+          message: 'hmm, that api key doesn\'t look right. make sure it\'s valid! 🔧',
+          timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+          bufoFace: 'confused'
+        };
+        setChatHistory(prev => [...prev, failMessage]);
+      }
+    } else {
+      setIsAIConnected(false);
+    }
+  };
+
+  // auto-scroll to bottom when new messages are added
+  useEffect(() => {
+    if (chatMessagesRef.current) {
+      chatMessagesRef.current.scrollTop = chatMessagesRef.current.scrollHeight;
+    }
+  }, [chatHistory]);
   
   const handleNavigate = () => {
     if (url) window.electronAPI.navigateTo(url);
@@ -35,38 +109,78 @@ function MainApp() {
     window.electronAPI.downloadAllImages();
   };
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!chatMessage.trim()) return;
 
     const userMessage = {
       type: 'user',
       message: chatMessage,
-      timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+      timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+      bufoFace: currentBufo // user messages can also have a bufo face for consistency
     };
 
     setChatHistory(prev => [...prev, userMessage]);
     setChatMessage('');
 
-    // simulate mascot response
-    setTimeout(() => {
-      const responses = [
-        'let me analyze that profile for you... 🔍',
-        'great question! here\'s what i\'d suggest... ✨',
-        'based on your preferences, try this approach... 💡',
-        'i see what you\'re going for! let me help... 🎯',
-        'interesting... let me craft the perfect response... ✍️'
-      ];
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
+    // get real ai response
+    setIsTyping(true);
+    
+    try {
+      console.log('Chat response - Connected:', isAIConnected);
+      
+      // get ai response through ipc
+      const result = await window.electronAPI.aiChat(chatMessage, chatHistory);
+      
+      let responseData;
+      if (result.success && result.response) {
+        responseData = result.response;
+      } else if (result.fallback) {
+        responseData = result.fallback;
+      } else {
+        // default fallback
+        responseData = {
+          message: 'connect your ai api key in the debug panel to unlock smart responses! 🔑',
+          emotion: 'casual',
+          confidence: 0.3
+        };
+      }
       
       const mascotMessage = {
         type: 'mascot',
-        message: randomResponse,
-        timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+        message: responseData.message,
+        timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+        bufoFace: responseData.emotion
       };
       
       setChatHistory(prev => [...prev, mascotMessage]);
-    }, 1000);
+      
+      // update current bufo based on ai emotion
+      if (bufoManager.isLoaded()) {
+        setCurrentBufo(responseData.emotion);
+        const newBufoImage = bufoManager.getBufoByEmotion(responseData.emotion);
+        if (newBufoImage) setBufoImage(newBufoImage);
+      }
+      
+    } catch (error) {
+      console.error('ai response error:', error);
+      
+      const errorMessage = {
+        type: 'mascot',
+        message: 'oops, my brain hiccuped! 🤖 try asking again?',
+        timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+        bufoFace: 'confused'
+      };
+      
+      setChatHistory(prev => [...prev, errorMessage]);
+      
+      if (bufoManager.isLoaded()) {
+        const errorBufoImage = bufoManager.getBufoByEmotion('confused');
+        if (errorBufoImage) setBufoImage(errorBufoImage);
+      }
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   const renderMainPanel = () => (
@@ -90,25 +204,46 @@ function MainApp() {
       {/* chat interface */}
       <div className="chat-container">
         <div className="chat-header">
-          <img src={bufoTea} alt="Bufo" className="mascot-avatar" />
+          <img src={bufoImage} alt="Bufo" className="mascot-avatar" />
           <div className="mascot-info">
             <span className="mascot-name">bufo</span>
             <span className="mascot-status">your dating copilot</span>
           </div>
         </div>
         
-        <div className="chat-messages">
-          {chatHistory.map((msg, index) => (
-            <div key={index} className={`message ${msg.type}`}>
-              {msg.type === 'mascot' && (
-                <img src={bufoTea} alt="Bufo" className="message-avatar" />
-              )}
+        <div className="chat-messages" ref={chatMessagesRef}>
+          {chatHistory.map((msg, index) => {
+            // get the appropriate bufo image for this message
+            const messageBufoImage = msg.type === 'mascot' && msg.bufoFace 
+              ? (bufoManager.isLoaded() ? bufoManager.getBufoByEmotion(msg.bufoFace) : bufoImage)
+              : bufoImage;
+              
+            return (
+              <div key={index} className={`message ${msg.type}`}>
+                {msg.type === 'mascot' && (
+                  <img src={messageBufoImage || bufoImage} alt="Bufo" className="message-avatar" />
+                )}
+                <div className="message-content">
+                  <span className="message-text">{msg.message}</span>
+                  <span className="message-time">{msg.timestamp}</span>
+                </div>
+              </div>
+            );
+          })}
+          
+          {/* typing indicator */}
+          {isTyping && (
+            <div className="message mascot">
+              <img src={bufoImage} alt="Bufo" className="message-avatar" />
               <div className="message-content">
-                <span className="message-text">{msg.message}</span>
-                <span className="message-time">{msg.timestamp}</span>
+                <span className="message-text typing-indicator">
+                  <span className="typing-dot"></span>
+                  <span className="typing-dot"></span>
+                  <span className="typing-dot"></span>
+                </span>
               </div>
             </div>
-          ))}
+          )}
         </div>
 
         <form onSubmit={handleSendMessage} className="chat-input-form">
@@ -116,7 +251,7 @@ function MainApp() {
             type="text"
             value={chatMessage}
             onChange={(e) => setChatMessage(e.target.value)}
-            placeholder="ask bufo for dating advice..."
+            placeholder="ask bufo..."
             className="chat-input"
           />
           <button type="submit" className="chat-send">
@@ -127,9 +262,60 @@ function MainApp() {
     </div>
   );
 
+  const handleRandomBufo = () => {
+    if (bufoManager.isLoaded()) {
+      const randomBufo = bufoManager.getRandomBufo();
+      if (randomBufo) {
+        setBufoImage(randomBufo);
+        setCurrentBufo('random');
+      }
+    }
+  };
+
   const renderDebugPanel = () => (
     <div className="panel-content">
       <h2>debugger</h2>
+      
+      {/* ai api key */}
+      <div className="form-group">
+        <label htmlFor="api-key-input">
+          sambanova api key {isAIConnected && <span style={{color: '#48dbfb'}}>✓</span>}:
+        </label>
+        <div className="input-group">
+          <input
+            id="api-key-input"
+            type="password"
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder="your sambanova api key"
+            style={{fontSize: '0.8rem'}}
+          />
+          <button onClick={() => handleApiKeyUpdate(apiKey)}>
+            {isAIConnected ? 'update' : 'connect'}
+          </button>
+        </div>
+        <small style={{color: '#666', fontSize: '0.75rem'}}>
+          {isAIConnected ? '🟢 ai connected and ready' : '🔴 enter api key for smart responses'}
+        </small>
+      </div>
+      
+      {/* bufo controls */}
+      <div className="form-group">
+        <label>bufo controls:</label>
+        <div className="button-group">
+          <button onClick={handleRandomBufo}>random bufo</button>
+          <button onClick={() => {
+            const emotions = ['happy', 'thinking', 'surprised', 'flirty', 'confident'];
+            const randomEmotion = emotions[Math.floor(Math.random() * emotions.length)];
+            const emotionBufo = bufoManager.getBufoByEmotion(randomEmotion);
+            if (emotionBufo) setBufoImage(emotionBufo);
+          }}>random emotion</button>
+        </div>
+        <small style={{color: '#666', fontSize: '0.75rem'}}>
+          loaded {bufoManager.isLoaded() ? bufoManager.getAllBufoNames().length : 0} bufos
+        </small>
+      </div>
+
       <form onSubmit={(e) => { e.preventDefault(); handleNavigate(); }} className="form-group">
         <label htmlFor="url-input">url:</label>
         <div className="input-group">
