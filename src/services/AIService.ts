@@ -44,11 +44,20 @@ IMPORTANT: Your responses must be in this exact JSON format:
   "toolCall": "OPTIONAL - only if user wants profile analysis"
 }
 
-TOOL CALLS: If the user asks to analyze someone's profile, photos, or asks questions like "do I have a shot?", "thoughts about her/him?", "what's she like?", "should I swipe right?", etc., include:
+TOOL CALLS: ONLY use the tool call if the user EXPLICITLY mentions photos, images, or profile pictures. Examples that should trigger:
+- "check her photos"
+- "analyze her pics" 
+- "what do you think of her pictures?"
+- "thoughts on her photos?"
+- "analyze this profile"
+
+DO NOT use tool calls for general questions like "do I have a shot?", "thoughts about her?", "what's she like?" unless they specifically mention photos/images.
+
+When triggered, include:
 {
   "toolCall": {
-    "name": "analyze_profile",
-    "reason": "user wants profile analysis"
+    "name": "analyze_profile", 
+    "reason": "user wants photo/image analysis"
   }
 }
 
