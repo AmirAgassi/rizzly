@@ -377,6 +377,88 @@ function MainApp() {
           setIsTyping(false);
         }
         
+      } else if (responseData.toolCall && responseData.toolCall.name === 'message_writing') {
+        console.log('AI requested message writing tool');
+        
+        // first show bufo's response acknowledging the request
+        const writingMessage = {
+          type: 'mascot',
+          message: 'alright, let me write something for you... 🤔',
+          timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+          bufoFace: 'thinking'
+        };
+        setChatHistory(prev => [...prev, writingMessage]);
+        
+        // update bufo to thinking
+        if (bufoManager.isLoaded()) {
+          const thinkingBufoImage = bufoManager.getBufoByEmotion('thinking');
+          if (thinkingBufoImage) setBufoImage(thinkingBufoImage);
+        }
+        
+        setIsTyping(true);
+        
+        try {
+          const writeResult = await window.electronAPI.aiWriteMessage(
+            originalMessage,
+            onboardingData,
+            chatHistory
+          );
+          
+          if (writeResult.success && writeResult.response) {
+            const generatedMessage = writeResult.response.message;
+            
+            // small delay then start typing (no preview message)
+            setTimeout(async () => {
+              try {
+                await window.electronAPI.typeMessage(generatedMessage);
+                
+                // show completion message
+                const completeMessage = {
+                  type: 'mascot',
+                  message: 'there you go! that should get their attention 😏',
+                  timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                  bufoFace: 'flirty'
+                };
+                setChatHistory(prev => [...prev, completeMessage]);
+                
+                // update bufo to flirty
+                if (bufoManager.isLoaded()) {
+                  const flirtyBufoImage = bufoManager.getBufoByEmotion('flirty');
+                  if (flirtyBufoImage) setBufoImage(flirtyBufoImage);
+                }
+                
+              } catch (typeError) {
+                console.error('Message typing error:', typeError);
+                // show the message they can copy if typing failed
+                const errorMessage = {
+                  type: 'mascot',
+                  message: `couldn't type it out, but here's what i wrote: "${generatedMessage}" - copy and paste it! 📝`,
+                  timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                  bufoFace: 'confused'
+                };
+                setChatHistory(prev => [...prev, errorMessage]);
+              }
+            }, 1000);
+            
+          } else {
+            throw new Error(writeResult.error || 'Message writing failed');
+          }
+          
+        } catch (toolError) {
+          console.error('Message writing error:', toolError);
+          const errorMessage = {
+            type: 'mascot',
+            message: (toolError as Error)?.message?.includes('messages page') 
+              ? 'i can only write messages when you\'re on the tinder chat page! 💬'
+              : 'having trouble writing that message right now. try again? 🤔',
+            timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+            bufoFace: 'confused'
+          };
+          setChatHistory(prev => [...prev, errorMessage]);
+        } finally {
+          setIsTyping(false);
+        }
+        
       } else {
         // normal response without tool calls
         const mascotMessage = {

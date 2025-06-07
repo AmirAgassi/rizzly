@@ -18,8 +18,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   aiStatus: () => ipcRenderer.invoke('ai:status'),
   aiAnalyzeProfile: (images: string[], userMessage: string, onboardingData: any, conversationHistory: any[]) => ipcRenderer.invoke('ai:analyze-profile', images, userMessage, onboardingData, conversationHistory),
   aiImproveMessage: (userRequest: string, onboardingData: any, conversationHistory: any[]) => ipcRenderer.invoke('ai:improve-message', userRequest, onboardingData, conversationHistory),
+  aiWriteMessage: (userRequest: string, onboardingData: any, conversationHistory: any[]) => ipcRenderer.invoke('ai:write-message', userRequest, onboardingData, conversationHistory),
   aiEmergencyCheck: (currentMessage: string, onboardingData: any, conversationHistory: any[]) => ipcRenderer.invoke('ai:emergency-check', currentMessage, onboardingData, conversationHistory),
   sendEmergencyAlert: (response: any) => ipcRenderer.send('emergency-alert', response),
+  typeMessage: (message: string) => ipcRenderer.invoke('type-message', message),
   onEmergencyAlert: (callback: (response: any) => void) => {
     ipcRenderer.on('emergency-alert', (event: any, response: any) => callback(response));
     return () => ipcRenderer.removeAllListeners('emergency-alert');

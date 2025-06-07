@@ -63,6 +63,7 @@ DO NOT use tool calls for general questions like "do I have a shot?", "thoughts 
 When triggered, include:
 Profile Analysis: {"toolCall": {"name": "analyze_profile", "reason": "user wants photo/image analysis"}}
 Message Help: {"toolCall": {"name": "message_assistance", "reason": "user wants help with their message"}}
+Message Writing: {"toolCall": {"name": "message_writing", "reason": "user wants me to write a message for them"}}
 
 Guidelines:
 - Keep responses casual and lowercase (like "hey there!" not "Hello there!")
@@ -349,6 +350,78 @@ Response format: {"message": "your reaction", "emotion": "shocked/relieved/conce
       return {
         message: "crisis averted! that message was genuinely unhinged 😰",
         emotion: "shocked",
+        confidence: 0.3
+      };
+    }
+  }
+
+  // write a message for the user
+  async writeMessage(userRequest: string, onboardingData?: any, conversationHistory?: any[]): Promise<AIResponse> {
+    try {
+      // build context from recent chat history
+      const recentChat = conversationHistory?.slice(-3).map(msg => 
+        `${msg.type === 'user' ? 'user' : 'you'}: ${msg.message}`
+      ).join('\n') || '';
+
+      const writePrompt = `You are a dating copilot who will write a perfect message for the user to send. Here's the context:
+
+User's dating goals: ${onboardingData?.primaryGoal || 'not specified'}
+Communication style: ${onboardingData?.communicationStyle?.join(', ') || 'not specified'}
+Interests: ${onboardingData?.conversationTopics?.join(', ') || 'not specified'}
+
+${recentChat ? `Recent conversation:\n${recentChat}\n` : ''}
+
+User's request: "${userRequest}"
+
+Based on their style and the conversation, write ONE single message they should send. Make it:
+- Natural and matches their personality
+- Engaging and likely to get a response
+- Not too long or intense
+- Appropriate for the context
+
+ONLY return the message they should send - nothing else. no quotes around it, no explanations, just the raw message text they can copy and send.
+
+Write entirely in lowercase to match their casual style.`;
+
+      const response = await fetch(this.baseUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'Meta-Llama-3.3-70B-Instruct',
+          messages: [{ role: 'user', content: writePrompt }],
+          temperature: 0.8, // higher temp for more creative messages
+          max_tokens: 100,
+          stream: false
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`ai api error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const aiMessage = data.choices?.[0]?.message?.content;
+
+      // clean up the message - remove quotes and explanations
+      const cleanMessage = aiMessage
+        .replace(/^["']|["']$/g, '') // remove quotes at start/end
+        .replace(/^(here's|try this|send this):\s*/i, '') // remove prefixes
+        .trim();
+
+      return {
+        message: cleanMessage,
+        emotion: 'confident',
+        confidence: 0.9
+      };
+
+    } catch (error) {
+      console.error('message writing error:', error);
+      return {
+        message: "having trouble crafting that perfect message right now 😅 try asking again?",
+        emotion: "confused",
         confidence: 0.3
       };
     }

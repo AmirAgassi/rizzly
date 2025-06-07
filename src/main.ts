@@ -94,6 +94,7 @@ ipcMain.on('onboarding-complete', () => {
        setInterval(async () => {
          // skip if intervention is happening
          if (interventionInProgress) {
+           console.log('⏸️ Skipping check - intervention in progress');
            return;
          }
         try {
@@ -232,9 +233,14 @@ ipcMain.on('onboarding-complete', () => {
                      }
                    }
                    
-                   // extend cooldown and clear intervention flag
+                   // extend cooldown and clear intervention flag after a delay
                    (global as any).emergencyCache[cacheKey] = now + 60000; // 1 minute cooldown
-                   interventionInProgress = false;
+                   
+                   // wait a bit longer before allowing new interventions
+                   setTimeout(() => {
+                     interventionInProgress = false;
+                     console.log('✅ Intervention lock released');
+                   }, 2000); // 2 second buffer
                  }
                }
             }
@@ -795,6 +801,110 @@ ipcMain.on('emergency-alert', (event, response) => {
   // forward the emergency alert to the main window
   if (mainWindow) {
     mainWindow.webContents.send('emergency-alert', response);
+  }
+});
+
+ipcMain.handle('ai:write-message', async (event, userRequest: string, onboardingData: any, conversationHistory: any[]) => {
+  try {
+    if (!aiService) {
+      return { 
+        success: false, 
+        error: 'AI service not initialized' 
+      };
+    }
+
+    if (!view) {
+      return { 
+        success: false, 
+        error: 'No browser view available' 
+      };
+    }
+
+    // first check if we're on the messages page
+    const currentUrl: string = await view.webContents.executeJavaScript('window.location.href');
+    if (!currentUrl.includes('tinder.com/app/messages')) {
+      return {
+        success: false,
+        error: 'Message writing only available on Tinder messages page'
+      };
+    }
+
+    console.log('Main process: Writing message for user request:', userRequest);
+    const response = await aiService.writeMessage(
+      userRequest,
+      onboardingData,
+      conversationHistory
+    );
+    
+    console.log('Main process: Message writing complete');
+    return { success: true, response };
+  } catch (error) {
+    console.error('Main process: Message writing error:', error);
+    return { 
+      success: false, 
+      error: (error as Error).message || 'Unknown error' 
+    };
+  }
+});
+
+ipcMain.handle('type-message', async (event, message: string) => {
+  try {
+    if (!view) {
+      return { 
+        success: false, 
+        error: 'No browser view available' 
+      };
+    }
+
+    // check if we're on the messages page
+    const currentUrl: string = await view.webContents.executeJavaScript('window.location.href');
+    if (!currentUrl.includes('tinder.com/app/messages')) {
+      return {
+        success: false,
+        error: 'Message typing only available on Tinder messages page'
+      };
+    }
+
+    console.log('Main process: Starting to type message:', message.substring(0, 30) + '...');
+    
+    // first clear the textarea
+    await view.webContents.executeJavaScript(`
+      (() => {
+        const textarea = document.querySelector('textarea[placeholder*="Type a message"], textarea[placeholder*="message"]');
+        if (textarea) {
+          textarea.focus();
+          textarea.value = '';
+          textarea.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+      })();
+    `);
+
+    // type character by character with delays
+    for (let i = 0; i < message.length; i++) {
+      const char = message[i];
+      
+      await view.webContents.executeJavaScript(`
+        (() => {
+          const textarea = document.querySelector('textarea[placeholder*="Type a message"], textarea[placeholder*="message"]');
+          if (textarea) {
+            textarea.value += '${char.replace(/'/g, "\\'")}';
+            textarea.dispatchEvent(new Event('input', { bubbles: true }));
+          }
+        })();
+      `);
+      
+      // delay between characters (faster than deletion)
+      await new Promise(resolve => setTimeout(resolve, 30 + Math.random() * 20));
+    }
+    
+    console.log('Main process: Message typing complete');
+    return { success: true };
+  } catch (error) {
+    console.error('Main process: Message typing error:', error);
+    return { 
+      success: false, 
+      error: (error as Error).message || 'Unknown error' 
+    };
   }
 });
 
