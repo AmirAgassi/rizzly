@@ -87,9 +87,15 @@ ipcMain.on('onboarding-complete', () => {
   view.webContents.on('did-finish-load', () => {
     console.log('🔄 Browser view finished loading, setting up monitoring...');
     
-    // instead of complex injection, let's use a simpler approach with periodic checking
-    const startMonitoring = () => {
-      setInterval(async () => {
+         // instead of complex injection, let's use a simpler approach with periodic checking
+     let interventionInProgress = false;
+     
+     const startMonitoring = () => {
+       setInterval(async () => {
+         // skip if intervention is happening
+         if (interventionInProgress) {
+           return;
+         }
         try {
           const currentUrl = view.webContents.getURL();
           
@@ -98,11 +104,11 @@ ipcMain.on('onboarding-complete', () => {
             return;
           }
           
-          // get current textarea content
-          const result = await view.webContents.executeJavaScript(`
-            (() => {
-              const textarea = document.querySelector('textarea[placeholder*="Type a message"], textarea[placeholder*="message"]');
-              if (textarea && textarea.value && textarea.value.trim().length >= 5) {
+                     // get current textarea content
+           const result = await view.webContents.executeJavaScript(`
+             (() => {
+               const textarea = document.querySelector('textarea[placeholder*="Type a message"], textarea[placeholder*="message"]');
+               if (textarea && textarea.value && textarea.value.trim().length >= 3) {
                 return {
                   found: true,
                   content: textarea.value.trim(),
@@ -113,18 +119,18 @@ ipcMain.on('onboarding-complete', () => {
             })();
           `);
           
-                     if (result.found && result.content) {
-            // check if this message has already been checked recently
-            const cacheKey = 'emergency-' + result.content.substring(0, 20);
+                                if (result.found && result.content) {
+             // check if this message has already been checked recently
+             const cacheKey = 'emergency-' + result.content.substring(0, 10);
             const lastCheck = (global as any).emergencyCache?.[cacheKey] || 0;
             const now = Date.now();
             
-            // only check if it's been more than 30 seconds since last check of this message
-            if (now - lastCheck > 30000) {
+            // only check if it's been more than 1 second since last check of this message  
+            if (now - lastCheck > 1000) {
               if (!(global as any).emergencyCache) (global as any).emergencyCache = {};
               (global as any).emergencyCache[cacheKey] = now;
               
-              console.log('🔍 Periodic check found message:', result.content.substring(0, 30) + '...');
+              console.log('🔍 Periodic check found message:', result.content + '...');
                
                // get onboarding data and chat history from main window's localStorage
                const onboardingData = await mainWindow.webContents.executeJavaScript(
@@ -134,26 +140,110 @@ ipcMain.on('onboarding-complete', () => {
                  `JSON.parse(localStorage.getItem('rizzly-chat-history') || '[]')`
                );
               
-              // run emergency check
-              if (aiService) {
-                const emergencyResult = await aiService.detectEmergency(result.content, onboardingData, chatHistory);
-                
-                if (emergencyResult.isEmergency) {
-                  console.log('🚨 PERIODIC EMERGENCY DETECTED:', result.content);
-                  
-                  // send emergency alert to main window
-                  if (mainWindow) {
-                    mainWindow.webContents.send('emergency-alert', emergencyResult);
-                  }
-                }
-              }
+                             // run emergency check
+               if (aiService) {
+                 const emergencyResult = await aiService.detectEmergency(result.content, onboardingData, chatHistory);
+                 
+                 if (emergencyResult.isEmergency) {
+                   console.log('🚨 EMERGENCY INTERVENTION: DELETING MESSAGE');
+                   interventionInProgress = true; // block further checks
+                   
+                   // send the actual LLM's horrified reaction first
+                   if (mainWindow) {
+                     mainWindow.webContents.send('emergency-alert', {
+                       ...emergencyResult,
+                       message: emergencyResult.message // use the LLM's actual disgusted/terrified response
+                     });
+                   }
+                   
+                   // disable textarea to prevent user from typing during deletion
+                   await view.webContents.executeJavaScript(`
+                     (() => {
+                       const textarea = document.querySelector('textarea[placeholder*="Type a message"], textarea[placeholder*="message"]');
+                       if (textarea) {
+                         textarea.disabled = true;
+                         textarea.style.opacity = '0.5';
+                         textarea.style.cursor = 'not-allowed';
+                         console.log('🚫 Textarea disabled for emergency deletion');
+                       }
+                     })();
+                   `);
+                   
+                   // start deleting the message character by character
+                   console.log(`🗑️ Starting character-by-character deletion...`);
+                   
+                   // keep deleting until textarea is completely empty
+                   let deletionAttempts = 0;
+                   const maxAttempts = 200; // safety limit
+                   
+                   while (deletionAttempts < maxAttempts) {
+                     const remainingLength = await view.webContents.executeJavaScript(`
+                       (() => {
+                         const textarea = document.querySelector('textarea[placeholder*="Type a message"], textarea[placeholder*="message"]');
+                         if (textarea && textarea.value.length > 0) {
+                           textarea.value = textarea.value.slice(0, -1);
+                           console.log('🗑️ Deleted character, remaining:', textarea.value.length);
+                           return textarea.value.length;
+                         }
+                         return 0;
+                       })();
+                     `);
+                     
+                     if (remainingLength === 0) {
+                       console.log('✅ Textarea completely cleared!');
+                       break;
+                     }
+                     
+                     await new Promise(resolve => setTimeout(resolve, 80)); // dramatic effect
+                     deletionAttempts++;
+                   }
+                   
+                   console.log('✅ Message deletion complete');
+                   
+                   // re-enable textarea
+                   await view.webContents.executeJavaScript(`
+                     (() => {
+                       const textarea = document.querySelector('textarea[placeholder*="Type a message"], textarea[placeholder*="message"]');
+                       if (textarea) {
+                         textarea.disabled = false;
+                         textarea.style.opacity = '1';
+                         textarea.style.cursor = 'text';
+                         console.log('✅ Textarea re-enabled');
+                       }
+                     })();
+                   `);
+                   
+                   // generate custom LLM follow-up reaction
+                   if (mainWindow && aiService) {
+                     try {
+                       const followUpResult = await aiService.generateFollowUpReaction(result.content);
+                       
+                       mainWindow.webContents.send('emergency-alert', {
+                         message: followUpResult.message,
+                         emotion: followUpResult.emotion
+                       });
+                     } catch (followUpError) {
+                       console.error('Follow-up generation failed:', followUpError);
+                       // fallback message
+                       mainWindow.webContents.send('emergency-alert', {
+                         message: `crisis averted! that message was genuinely unhinged 😰`,
+                         emotion: 'shocked'
+                       });
+                     }
+                   }
+                   
+                   // extend cooldown and clear intervention flag
+                   (global as any).emergencyCache[cacheKey] = now + 60000; // 1 minute cooldown
+                   interventionInProgress = false;
+                 }
+               }
             }
           }
           
-        } catch (error) {
-          // silently ignore errors to avoid spam
-        }
-      }, 2000); // check every 2 seconds
+                 } catch (error) {
+           // silently ignore errors to avoid spam
+         }
+       }, 100); // check every 100ms for ultra-fast detection
     };
     
     // start monitoring after a short delay

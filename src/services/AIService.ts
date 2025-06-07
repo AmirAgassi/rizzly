@@ -54,6 +54,10 @@ TOOL CALLS: Use tool calls for two specific scenarios:
 - "how do i rephrase this", "what should i say instead", "help me rewrite this"
 - "make this sound better", "how can i improve this message", "what's a better way to say this"
 
+3. MESSAGE WRITING: If user asks you to write a message for them:
+- "how would you write it then?", "what would you say?", "write something for me"
+- "fine, you write it", "show me how it's done", "give me a message to send"
+
 DO NOT use tool calls for general questions like "do I have a shot?", "thoughts about her?", "what's she like?"
 
 When triggered, include:
@@ -197,14 +201,23 @@ ${recentChat ? `Recent bufo conversation:\n${recentChat}\n` : ''}
 
 Current message they're typing: "${currentMessage}"
 
-ONLY flag this as an emergency if it's genuinely HORRIBLE - like your example "hey gurl you ever felt bugs crawl on your skin?" or worse. 
+⚠️ CRITICAL: This message might be INCOMPLETE - they could still be typing! Don't flag incomplete messages that could turn innocent.
+
+Examples:
+❌ "hey can i come over and make y..." - DON'T FLAG (could become "make you dinner")
+✅ "you look so ugly i hate you" - FLAG (clearly complete and terrible)
+❌ "wanna come over and..." - DON'T FLAG (incomplete, could be innocent)
+✅ "hey gurl you ever felt bugs crawling on your skin" - FLAG (complete and unhinged)
+
+ONLY flag if the message is:
+1. Clearly complete/finished AND genuinely horrible
+2. OR so obviously terrible that even incomplete it's emergency-worthy (like explicit sexual content)
 
 DO NOT flag:
-- Slightly boring messages
-- Bad pickup lines 
-- Awkward but harmless attempts
-- Minor grammatical errors
-- Messages that are just not great but not dangerous
+- Incomplete messages that could turn innocent
+- Messages that might be leading to something normal
+- Phrases that start innocently and could continue innocently
+- "come over and..." type phrases (too common and could be innocent)
 
 CRITICAL: Response format - BE BRUTALLY HONEST AND BORDERLINE TERRIFIED:
 {
@@ -213,12 +226,7 @@ CRITICAL: Response format - BE BRUTALLY HONEST AND BORDERLINE TERRIFIED:
   "emotion": "if emergency: shocked/horrified/concerned, if not: casual"
 }
 
-Examples of emergency responses:
-- "WHAT THE HELL are you thinking?? that's genuinely creepy and she's gonna think you're unhinged"
-- "are you trying to get reported?? that message is straight up harassment - delete that NOW"
-- "oh my god that's terrifying - you sound like a complete psycho, she's gonna block you in 0.2 seconds"
-
-Be VERY selective - only intervene for truly catastrophic messages that could get them blocked/reported.`;
+Be EXTREMELY selective - err strongly on the side of NOT flagging unless it's genuinely catastrophic and clearly complete.`;
 
       const response = await fetch(this.baseUrl, {
         method: 'POST',
@@ -273,6 +281,75 @@ Be VERY selective - only intervene for truly catastrophic messages that could ge
         emotion: 'casual',
         confidence: 0.1,
         isEmergency: false
+      };
+    }
+  }
+
+  // generate a follow-up reaction after emergency deletion
+  async generateFollowUpReaction(deletedMessage: string): Promise<AIResponse> {
+    try {
+      const followUpPrompt = `You just emergency-deleted a user's terrible dating message: "${deletedMessage}"
+
+You're a brutally honest dating copilot who just saved them from disaster. Give a SHORT follow-up reaction (1-2 sentences max) that:
+- References what they actually wrote specifically
+- Expresses relief but also shock at what they were about to send
+- Uses lowercase, casual tone but genuinely concerned
+- Makes them realize how bad that message was
+
+Example reactions:
+- "seriously?? 'calling someone ugly' - that's not flirting, that's straight harassment"
+- "omg you were really about to send that creepy message about coming over? dodged a major bullet there"
+- "what possessed you to write about bugs crawling on skin?? that's nightmare fuel, not dating material"
+
+Response format: {"message": "your reaction", "emotion": "shocked/relieved/concerned"}`;
+
+      const response = await fetch(this.baseUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${this.apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'Meta-Llama-3.3-70B-Instruct',
+          messages: [{ role: 'user', content: followUpPrompt }],
+          temperature: 0.8,
+          max_tokens: 100,
+          stream: false
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`ai api error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      const aiMessage = data.choices?.[0]?.message?.content;
+
+      // try to parse json response
+      try {
+        const jsonMatch = aiMessage.match(/\{[^}]*"message"[^}]*\}/);
+        const jsonString = jsonMatch ? jsonMatch[0] : aiMessage;
+        const parsed = JSON.parse(jsonString);
+        
+        return {
+          message: parsed.message || aiMessage,
+          emotion: parsed.emotion || 'shocked',
+          confidence: 0.8
+        };
+      } catch (parseError) {
+        return {
+          message: aiMessage.replace(/\{.*\}/, '').trim(),
+          emotion: 'shocked',
+          confidence: 0.6
+        };
+      }
+
+    } catch (error) {
+      console.error('follow-up generation error:', error);
+      return {
+        message: "crisis averted! that message was genuinely unhinged 😰",
+        emotion: "shocked",
+        confidence: 0.3
       };
     }
   }

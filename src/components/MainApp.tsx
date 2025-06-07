@@ -107,7 +107,7 @@ function MainApp() {
       // add urgent warning message to chat
       const emergencyMessage = {
         type: 'mascot',
-        message: `🚨 HOLD UP! ${response.message}`,
+        message: response.message, // just use the LLM's natural reaction
         timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
         bufoFace: response.emotion
       };
