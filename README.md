@@ -1,4 +1,4 @@
-# 🐸 rizzly - your ai dating wingman
+# 🐸 rizzly - your ai wingman
 
 <br>
 
