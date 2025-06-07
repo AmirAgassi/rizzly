@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, BrowserView, session } from 'electron';
+import { app, BrowserWindow, ipcMain, WebContentsView, session } from 'electron';
 import path from 'path';
 
 declare const MAIN_WINDOW_WEBPACK_ENTRY: string;
@@ -9,7 +9,7 @@ if (require('electron-squirrel-startup')) {
 }
 
 let mainWindow: BrowserWindow;
-let view: BrowserView;
+let view: WebContentsView;
 
 const createWindow = (): void => {
   mainWindow = new BrowserWindow({
@@ -60,18 +60,18 @@ ipcMain.on('onboarding-complete', () => {
   mainWindow.setResizable(true);
   mainWindow.center();
 
-  view = new BrowserView({
+  view = new WebContentsView({
     webPreferences: {
       partition: 'persist:rizzly-session',
     },
   });
-  mainWindow.setBrowserView(view);
+  mainWindow.contentView.addChildView(view);
 
   const resizeView = () => {
     const [width, height] = mainWindow.getSize();
-    const controlPanelHeight = 240;
+    const debuggerPanelWidth = 320; // match the CSS width from MainApp.css
     if (view) {
-      view.setBounds({ x: 0, y: controlPanelHeight, width, height: height - controlPanelHeight });
+      view.setBounds({ x: 0, y: 0, width: width - debuggerPanelWidth, height });
     }
   };
 
@@ -82,14 +82,14 @@ ipcMain.on('onboarding-complete', () => {
   // view.webContents.openDevTools({ mode: 'detach' });
 
   // handle file downloads
-  view.webContents.session.on('will-download', (event, item, webContents) => {
+  view.webContents.session.on('will-download', (event: any, item: any, webContents: any) => {
     // let's save to the user's downloads folder
     const downloadsPath = app.getPath('downloads');
     const fileName = item.getFilename();
     const savePath = path.join(downloadsPath, fileName);
     item.setSavePath(savePath);
 
-    item.on('updated', (event, state) => {
+    item.on('updated', (event: any, state: any) => {
       if (state === 'interrupted') {
         console.log('download is interrupted but can be resumed');
       } else if (state === 'progressing') {
@@ -105,7 +105,7 @@ ipcMain.on('onboarding-complete', () => {
       }
     });
 
-    item.once('done', (event, state) => {
+    item.once('done', (event: any, state: any) => {
       if (state === 'completed') {
         console.log(`download finished: ${fileName}`);
       } else {
