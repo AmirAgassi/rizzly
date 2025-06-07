@@ -1,5 +1,7 @@
 # 🐸 rizzly - your ai dating wingman
 
+<br>
+
 <div align="center">
   <img src="src/bufopack/bufo-tea.png" alt="bufo mascot" width="120" height="120">
   <br>
@@ -7,7 +9,10 @@
   <br>
 </div>
 
+<br>
+
 <div align="center">
+
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Electron](https://img.shields.io/badge/Electron-36.4.0-47848f.svg)](https://www.electronjs.org/)
@@ -17,7 +22,9 @@
 [![Dating](https://img.shields.io/badge/Dating-Copilot-e91e63.svg)](#)
 
 </div>
-</div>
+
+<br>
+
 <p align="center">
 <img width="700" alt="image" align="center" src="https://github.com/user-attachments/assets/fe30a0c1-d374-4852-b56c-5ded6d989d3e" />
 </p>
@@ -55,5 +62,5 @@ complete onboarding, add your api key, and start getting personalized dating ass
 dating apps can be challenging. crafting engaging messages and interpreting profiles requires skills that don't come naturally to everyone. rizzly bridges this gap with ai assistance that adapts to your personality, making dating apps less intimidating and more successful.
 
 <div align="center">
-  <sub>built with care for better dating experiences</sub>
+  <sub>built with 💙 for better dating experiences</sub>
 </div>
