@@ -52,39 +52,38 @@ class BufoManager {
 
   // get bufo based on emotion/context (ai will choose these)
   getBufoByEmotion(emotion: string): string {
-    const emotionMap: { [key: string]: string[] } = {
+    const emotionMap: { [key: string]: string } = {
       // happy/positive emotions
-      happy: ['bufo-all-good', 'bufo-feels-appreciated', 'bufo-tears-of-joy', 'bufo-blush'],
-      excited: ['bufo-extra-cool', 'bufo-boi', 'bufo-happy-hour'],
-      confident: ['bufo-fancy-tea', 'bufo-fingerguns-back', 'bufo-fab', 'bufo-fellow-kids'],
+      happy: 'bufo-all-good',
+      excited: 'bufo-extra-cool',
+      confident: 'bufo-fancy-tea',
       
       // thinking/analytical
-      thinking: ['bufo-deep-hmm', 'bufo-brain', 'bufo-anime-glasses'],
-      analyzing: ['bufo-hacker', 'bufo-eyes', 'bufo-blank-stare'],
+      thinking: 'bufo-deep-hmm',
+      analyzing: 'bufo-hacker',
       
       // reactions
-      surprised: ['bufo-are-you-seeing-this', 'bufo-amaze', 'bufo-eye-twitch'],
-      confused: ['bufo-breakdown', 'bufo-existential-dread-sets-in', 'bufo-facepalm'],
-      disappointed: ['bufo-fails-the-vibe-check', 'bufo-awkward-smile', 'bufo-single-tear'],
+      surprised: 'bufo-are-you-seeing-this',
+      confused: 'bufo-breakdown',
+      disappointed: 'bufo-fails-the-vibe-check',
       
       // supportive/helpful
-      supportive: ['bufo-back-pat', 'bufo-feel-better', 'bufo-bless'],
-      encouraging: ['bufo-hands', 'bufo-defend', 'bufo-fastest-rubber-stamp-in-the-west'],
+      supportive: 'bufo-back-pat',
+      encouraging: 'bufo-hands',
       
       // flirty/dating context
-      flirty: ['bufo-be-my-valentine', 'bufo-bouquet', 'bufo-box-of-chocolates'],
-      romantic: ['bufo-blows-the-magic-conch', 'bufo-breaks-your-heart', 'bufo-feeling-pretty-might-delete-later'],
+      flirty: 'bufo-be-my-valentine',
+      romantic: 'bufo-blows-the-magic-conch',
       
       // casual/chill
-      chill: ['bufo-drinking-coffee', 'bufo-tea', 'bufo-fell-asleep', 'bufo-blanket'],
-      casual: ['bufo-airpods', 'bufo-headphones', 'bufo-ambiently-existing'],
+      chill: 'bufo-drinking-coffee',
+      casual: 'bufo-airpods',
       
-      // default fallbacks
-      default: ['bufo-tea', 'bufo-all-good', 'bufo-fancy-tea']
+      // default fallback
+      default: 'bufo-tea'
     };
 
-    const candidates = emotionMap[emotion.toLowerCase()] || emotionMap.default;
-    const chosenName = candidates[Math.floor(Math.random() * candidates.length)];
+    const chosenName = emotionMap[emotion.toLowerCase()] || emotionMap.default;
     
     return this.getBufo(chosenName) || this.getBufo('bufo-tea') || '';
   }

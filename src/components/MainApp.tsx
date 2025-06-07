@@ -6,6 +6,7 @@ import PhotoStack from './PhotoStack';
 import bufoTea from '../bufopack/bufo-tea.png';
 
 function MainApp() {
+
   const [activeTab, setActiveTab] = useState('main');
   const [url, setUrl] = useState('https://tinder.com/app/recs');
   const [nextButtonSelector] = useState('button[aria-label="Next Photo"]');
@@ -133,26 +134,10 @@ function MainApp() {
     const scrollToBottom = () => {
       if (chatMessagesRef.current) {
         const container = chatMessagesRef.current;
-        console.log('🔥 SCROLL DEBUG:', {
-          scrollHeight: container.scrollHeight,
-          clientHeight: container.clientHeight,
-          scrollTop: container.scrollTop,
-          hasRef: !!chatMessagesRef.current,
-          className: container.className
-        });
-        
         // force scroll to absolute bottom
         container.scrollTop = container.scrollHeight + 1000;
-        
-        console.log('🔥 AFTER SCROLL:', {
-          newScrollTop: container.scrollTop
-        });
-      } else {
-        console.log('🔥 NO CHAT REF!');
       }
     };
-
-    console.log('🔥 SCROLL EFFECT TRIGGERED, chat history length:', chatHistory.length);
 
     // immediate scroll
     scrollToBottom();
