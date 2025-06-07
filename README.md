@@ -1,9 +1,10 @@
-<img width="1255" alt="image" src="https://github.com/user-attachments/assets/c02bab05-bacb-4704-bb9a-0e2ccc06f617" /># 🐸 rizzly - your ai dating wingman
+# 🐸 rizzly - your ai dating wingman
 
 <div align="center">
   <img src="src/bufopack/bufo-tea.png" alt="bufo mascot" width="120" height="120">
   <br>
   <em>meet bufo - he's got your back</em>
+  <br>
 </div>
 
 <div align="center">
@@ -16,6 +17,10 @@
 [![Dating](https://img.shields.io/badge/Dating-Copilot-e91e63.svg)](#)
 
 </div>
+</div>
+<p align="center">
+<img width="700" alt="image" align="center" src="https://github.com/user-attachments/assets/fe30a0c1-d374-4852-b56c-5ded6d989d3e" />
+</p>
 
 ## what is rizzly?
 
