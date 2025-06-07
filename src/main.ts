@@ -71,7 +71,7 @@ ipcMain.on('onboarding-complete', () => {
 
   const resizeView = () => {
     const [width, height] = mainWindow.getSize();
-    const debuggerPanelWidth = 320; // match the CSS width from MainApp.css
+    const debuggerPanelWidth = 420; // match the CSS width from MainApp.css
     if (view) {
       view.setBounds({ x: 0, y: 0, width: width - debuggerPanelWidth, height });
     }

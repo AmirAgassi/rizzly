@@ -82,7 +82,7 @@ body {
 
 /* right panel with tabs */
 .right-panel {
-    width: 320px;
+    width: 420px;
     background: #111111;
     border-left: 1px solid #333;
     display: flex;
@@ -373,14 +373,16 @@ body {
 
 .chat-input {
     flex: 1;
-    padding: 0.75rem 1rem;
+    padding: 0.5rem 0.875rem;
     background: #1a1a1a;
     border: 1px solid #333;
-    border-radius: 20px;
+    border-radius: 16px;
     color: #fff;
     font-size: 0.85rem;
     outline: none;
     transition: border-color 0.2s;
+    height: 32px;
+    box-sizing: border-box;
 }
 
 .chat-input:focus {
@@ -393,13 +395,13 @@ body {
 }
 
 .chat-send {
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
     background: #48dbfb;
     border: none;
     border-radius: 50%;
     color: #000;
-    font-size: 1.2rem;
+    font-size: 1rem;
     cursor: pointer;
     display: flex;
     align-items: center;
