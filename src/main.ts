@@ -1007,7 +1007,7 @@ ipcMain.handle('download-profile-images', async (event) => {
         })();
       `);
 
-      await new Promise(resolve => setTimeout(resolve, 600));
+      await new Promise(resolve => setTimeout(resolve, 900));
     }
 
     event.sender.send('download-progress', { 
