@@ -9,4 +9,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   logCurrentImageUrl: () => ipcRenderer.send('log-current-image-url'),
   clickNextPhoto: (selector: string) => ipcRenderer.send('click-next-photo', selector),
   downloadAllImages: () => ipcRenderer.send('download-all-images'),
+  resizeWindow: (width: number, height: number) => ipcRenderer.send('resize-window', { width, height }),
 });

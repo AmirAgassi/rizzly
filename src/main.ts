@@ -13,16 +13,22 @@ let view: BrowserView;
 
 const createWindow = (): void => {
   mainWindow = new BrowserWindow({
-    height: 800,
-    width: 1200,
+    height: 680,
+    width: 540,
     titleBarStyle: 'hidden',
     frame: false,
     transparent: true,
     backgroundColor: 'rgba(0,0,0,0)',
+    resizable: false,
+    trafficLightPosition: { x: -100, y: -100 }, // Hide traffic lights completely
     webPreferences: {
       preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
       nodeIntegration: false,
       contextIsolation: true,
+      experimentalFeatures: false,
+      offscreen: false,
+      enableBlinkFeatures: '', // disable potentially problematic features
+      disableBlinkFeatures: 'Accelerated2dCanvas,AcceleratedSmallCanvases', // force software rendering for problematic elements
     },
   });
 
@@ -48,6 +54,11 @@ app.on('activate', () => {
 ipcMain.on('onboarding-complete', () => {
   console.log('onboarding done, creating browser view');
   if (!mainWindow) return;
+
+  // Resize window for the main app interface
+  mainWindow.setSize(1200, 800);
+  mainWindow.setResizable(true);
+  mainWindow.center();
 
   view = new BrowserView({
     webPreferences: {

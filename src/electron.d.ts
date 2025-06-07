@@ -4,6 +4,7 @@ export interface IElectronAPI {
   logCurrentImageUrl: () => void;
   clickNextPhoto: (selector: string) => void;
   downloadAllImages: () => void;
+  resizeWindow: (width: number, height: number) => void;
 }
 
 declare global {

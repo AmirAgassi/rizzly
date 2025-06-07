@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Welcome from './Welcome';
 import FinalSetup from './FinalSetup';
 import './Onboarding.css';
@@ -11,8 +11,8 @@ export interface OnboardingData {
   // step 1: welcome
   // step 2: primary goal
   primaryGoal: string;
-  // step 3: experience level
-  experience: string;
+  // step 3: assistance level
+  assistanceLevel: string;
   // step 4: communication style
   communicationStyle: string[];
   // step 5: conversation topics
@@ -84,74 +84,65 @@ const GoalQuestion = ({ data, updateData, onNext, onBack }: any) => (
       </div>
     </div>
 
-    <div className="navigation-buttons">
-      <button onClick={onBack} className="back-button">Back</button>
-      <button 
-        onClick={onNext} 
-        className="next-button"
-        disabled={!data.primaryGoal}
-      >
-        Continue
-      </button>
-    </div>
   </div>
 );
 
-const ExperienceQuestion = ({ data, updateData, onNext, onBack }: any) => (
+const AssistanceLevelQuestion = ({ data, updateData, onNext, onBack }: any) => (
   <div className="onboarding-content">
-    <h2>Your dating app experience?</h2>
+    <h2>How can your dating copilot help?</h2>
     <p className="subtitle">
-      This helps us tailor the AI's approach to match your comfort level.
+      Choose the level of assistance you'd like from your AI dating companion.
     </p>
 
     <div className="text-input-group">
-      <div className="onboarding-options three-column">
+      <div className="onboarding-options single-column">
         <label>
           <input 
             type="radio" 
-            name="experience" 
-            value="beginner" 
-            checked={data.experience === 'beginner'} 
-            onChange={(e) => updateData({ experience: e.target.value })} 
+            name="assistanceLevel" 
+            value="write-messages" 
+            checked={data.assistanceLevel === 'write-messages'} 
+            onChange={(e) => updateData({ assistanceLevel: e.target.value })} 
           />
-          <span className="option-icon">🌱</span>
-          New to dating apps
+          <span className="option-icon">✍️</span>
+          Write messages for me (full automation)
         </label>
         <label>
           <input 
             type="radio" 
-            name="experience" 
-            value="intermediate" 
-            checked={data.experience === 'intermediate'} 
-            onChange={(e) => updateData({ experience: e.target.value })} 
+            name="assistanceLevel" 
+            value="suggest-responses" 
+            checked={data.assistanceLevel === 'suggest-responses'} 
+            onChange={(e) => updateData({ assistanceLevel: e.target.value })} 
           />
-          <span className="option-icon">📱</span>
-          Some experience, looking to improve
+          <span className="option-icon">💡</span>
+          Suggest what to say (coaching mode)
         </label>
         <label>
           <input 
             type="radio" 
-            name="experience" 
-            value="experienced" 
-            checked={data.experience === 'experienced'} 
-            onChange={(e) => updateData({ experience: e.target.value })} 
+            name="assistanceLevel" 
+            value="review-messages" 
+            checked={data.assistanceLevel === 'review-messages'} 
+            onChange={(e) => updateData({ assistanceLevel: e.target.value })} 
           />
-          <span className="option-icon">🎯</span>
-          Very experienced, want to optimize
+          <span className="option-icon">👀</span>
+          Review my messages (feedback mode)
+        </label>
+        <label>
+          <input 
+            type="radio" 
+            name="assistanceLevel" 
+            value="conversation-starters" 
+            checked={data.assistanceLevel === 'conversation-starters'} 
+            onChange={(e) => updateData({ assistanceLevel: e.target.value })} 
+          />
+          <span className="option-icon">🚀</span>
+          Just give me conversation starters
         </label>
       </div>
     </div>
 
-    <div className="navigation-buttons">
-      <button onClick={onBack} className="back-button">Back</button>
-      <button 
-        onClick={onNext} 
-        className="next-button"
-        disabled={!data.experience}
-      >
-        Continue
-      </button>
-    </div>
   </div>
 );
 
@@ -197,16 +188,6 @@ const CommunicationStyleQuestion = ({ data, updateData, onNext, onBack }: any) =
         </div>
       </div>
 
-      <div className="navigation-buttons">
-        <button onClick={onBack} className="back-button">Back</button>
-        <button 
-          onClick={onNext} 
-          className="next-button"
-          disabled={!data.communicationStyle?.length}
-        >
-          Continue
-        </button>
-      </div>
     </div>
   );
 };
@@ -235,7 +216,7 @@ const TopicsQuestion = ({ data, updateData, onNext, onBack }: any) => {
             { value: 'movies', icon: '🎬', label: 'Movies & TV shows' },
             { value: 'food', icon: '🍕', label: 'Food & restaurants' },
             { value: 'fitness', icon: '💪', label: 'Fitness & sports' },
-            { value: 'books', icon: '📚', label: 'Books & literature' }
+            { value: 'books', icon: '📚', label: 'Books & reading' }
           ].map(topic => (
             <div key={topic.value} className="multi-select-option">
               <label>
@@ -253,16 +234,6 @@ const TopicsQuestion = ({ data, updateData, onNext, onBack }: any) => {
         </div>
       </div>
 
-      <div className="navigation-buttons">
-        <button onClick={onBack} className="back-button">Back</button>
-        <button 
-          onClick={onNext} 
-          className="next-button"
-          disabled={!data.conversationTopics?.length}
-        >
-          Continue
-        </button>
-      </div>
     </div>
   );
 };
@@ -323,16 +294,6 @@ const OpenerStyleQuestion = ({ data, updateData, onNext, onBack }: any) => (
       </div>
     </div>
 
-    <div className="navigation-buttons">
-      <button onClick={onBack} className="back-button">Back</button>
-      <button 
-        onClick={onNext} 
-        className="next-button"
-        disabled={!data.openerStyle}
-      >
-        Continue
-      </button>
-    </div>
   </div>
 );
 
@@ -381,16 +342,6 @@ const ResponseSpeedQuestion = ({ data, updateData, onNext, onBack }: any) => (
       </div>
     </div>
 
-    <div className="navigation-buttons">
-      <button onClick={onBack} className="back-button">Back</button>
-      <button 
-        onClick={onNext} 
-        className="next-button"
-        disabled={!data.responseSpeed}
-      >
-        Continue
-      </button>
-    </div>
   </div>
 );
 
@@ -413,16 +364,6 @@ const NameQuestion = ({ data, updateData, onNext, onBack }: any) => (
       />
     </div>
 
-    <div className="navigation-buttons">
-      <button onClick={onBack} className="back-button">Back</button>
-      <button 
-        onClick={onNext} 
-        className="next-button"
-        disabled={!data.name.trim()}
-      >
-        Continue
-      </button>
-    </div>
   </div>
 );
 
@@ -446,25 +387,16 @@ const NotificationsQuestion = ({ data, updateData, onNext, onBack }: any) => (
       </div>
     </div>
 
-    <div className="navigation-buttons">
-      <button onClick={onBack} className="back-button">Back</button>
-      <button 
-        onClick={onNext} 
-        className="next-button"
-      >
-        Continue
-      </button>
-    </div>
   </div>
 );
 
 function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
-  const [step, setStep] = useState(1);
-  const totalSteps = 9;
+  const [step, setStep] = useState(0); // start at 0 to skip buggy first render
+  const totalSteps = 10;
   
   const [data, setData] = useState<OnboardingData>({
     primaryGoal: '',
-    experience: '',
+    assistanceLevel: '',
     communicationStyle: [],
     conversationTopics: [],
     openerStyle: '',
@@ -475,6 +407,31 @@ function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
   const next = () => setStep(s => Math.min(s + 1, totalSteps));
   const back = () => setStep(s => Math.max(s - 1, 1));
+  
+  // check for existing preferences and skip onboarding if they exist
+  React.useEffect(() => {
+    const existingPreferences = localStorage.getItem('rizzly-preferences');
+    if (existingPreferences) {
+      try {
+        const savedData = JSON.parse(existingPreferences);
+        // check if the saved data has all required fields
+        if (savedData.primaryGoal && savedData.assistanceLevel && savedData.name) {
+          console.log('Found existing preferences, skipping onboarding');
+          onComplete();
+          return;
+        }
+      } catch (error) {
+        console.log('Error parsing saved preferences, starting fresh onboarding');
+        localStorage.removeItem('rizzly-preferences');
+      }
+    }
+    
+    // auto-advance from dummy step 0 if no existing preferences
+    if (step === 0) {
+      const timer = setTimeout(() => setStep(1), 100);
+      return () => clearTimeout(timer);
+    }
+  }, [step, onComplete]);
 
   const updateData = (updates: Partial<OnboardingData>) => {
     setData(prev => ({ ...prev, ...updates }));
@@ -485,6 +442,23 @@ function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     onComplete();
   };
 
+  // determine if next button should be disabled based on current step
+  const isNextDisabled = () => {
+    switch (step) {
+      case 1: return false; // welcome step never disabled
+      case 2: return !data.primaryGoal;
+      case 3: return !data.assistanceLevel;
+      case 4: return !data.communicationStyle?.length;
+      case 5: return !data.conversationTopics?.length;
+      case 6: return !data.openerStyle;
+      case 7: return !data.responseSpeed;
+      case 8: return !data.name.trim();
+      case 9: return false; // notifications step never disabled
+      case 10: return false; // final step
+      default: return false;
+    }
+  };
+
   const renderStep = () => {
     const commonProps = {
       data,
@@ -493,44 +467,90 @@ function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       onBack: back,
     };
 
+    console.log('Rendering step:', step); // debug log
+
     switch (step) {
       case 1:
-        return <Welcome data={data} updateData={updateData} onNext={next} onBack={back} />;
+        return <Welcome key="welcome" data={data} updateData={updateData} onNext={next} onBack={back} />;
       case 2:
-        return <GoalQuestion {...commonProps} />;
+        return <GoalQuestion key="goal" {...commonProps} />;
       case 3:
-        return <ExperienceQuestion {...commonProps} />;
+        return <AssistanceLevelQuestion key="assistance" {...commonProps} />;
       case 4:
-        return <CommunicationStyleQuestion {...commonProps} />;
+        return <CommunicationStyleQuestion key="communication" {...commonProps} />;
       case 5:
-        return <TopicsQuestion {...commonProps} />;
+        return <TopicsQuestion key="topics" {...commonProps} />;
       case 6:
-        return <OpenerStyleQuestion {...commonProps} />;
+        return <OpenerStyleQuestion key="opener" {...commonProps} />;
       case 7:
-        return <ResponseSpeedQuestion {...commonProps} />;
+        return <ResponseSpeedQuestion key="speed" {...commonProps} />;
       case 8:
-        return <NameQuestion {...commonProps} />;
+        return <NameQuestion key="name" {...commonProps} />;
       case 9:
-        return <NotificationsQuestion {...commonProps} />;
+        return <NotificationsQuestion key="notifications" {...commonProps} />;
       case 10:
-        return <FinalSetup data={data} updateData={updateData} onFinish={handleComplete} onBack={back} />;
+        return <FinalSetup key="final" data={data} updateData={updateData} onFinish={handleComplete} onBack={back} />;
       default:
-        return <Welcome data={data} updateData={updateData} onNext={next} onBack={back} />;
+        console.log('ERROR: Invalid step, defaulting to welcome');
+        return <Welcome key="welcome-default" data={data} updateData={updateData} onNext={next} onBack={back} />;
     }
   };
 
   return (
     <div className="onboarding-container">
-      <div className="progress-bar-container">
-        <div 
-          className="progress-bar" 
-          style={{ width: `${(step / totalSteps) * 100}%` }}
-        ></div>
-      </div>
-      
       <div className="onboarding-card">
-        {renderStep()}
+        {/* <div className="progress-bar-container">
+          <div 
+            className="progress-bar" 
+            style={{ width: `${(step / totalSteps) * 100}%` }}
+          ></div>
+        </div> */}
+        <div style={{ width: '100%', height: '100%' }}>
+          {step === 0 && <div style={{ height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white' }}>.</div>}
+          {step === 1 && <Welcome data={data} updateData={updateData} onNext={next} onBack={back} />}
+          {step === 2 && <GoalQuestion data={data} updateData={updateData} onNext={next} onBack={back} />}
+          {step === 3 && <AssistanceLevelQuestion data={data} updateData={updateData} onNext={next} onBack={back} />}
+          {step === 4 && <CommunicationStyleQuestion data={data} updateData={updateData} onNext={next} onBack={back} />}
+          {step === 5 && <TopicsQuestion data={data} updateData={updateData} onNext={next} onBack={back} />}
+          {step === 6 && <OpenerStyleQuestion data={data} updateData={updateData} onNext={next} onBack={back} />}
+          {step === 7 && <ResponseSpeedQuestion data={data} updateData={updateData} onNext={next} onBack={back} />}
+          {step === 8 && <NameQuestion data={data} updateData={updateData} onNext={next} onBack={back} />}
+          {step === 9 && <NotificationsQuestion data={data} updateData={updateData} onNext={next} onBack={back} />}
+          {step === 10 && <FinalSetup data={data} updateData={updateData} onFinish={handleComplete} onBack={back} />}
+        </div>
+        
+        {/* fixed navigation buttons */}
+        {step > 0 && step <= 10 && (
+          <div className="navigation-buttons">
+            <button 
+              onClick={() => {
+                console.log('Back clicked, current step:', step);
+                back();
+              }} 
+              className="back-button"
+              style={{ pointerEvents: 'auto', zIndex: 10000 }}
+            >
+              Back
+            </button>
+            <button 
+              onClick={() => {
+                console.log('Next clicked, current step:', step);
+                if (step === 10) {
+                  handleComplete();
+                } else {
+                  next();
+                }
+              }} 
+              className={`next-button ${step === 10 ? 'primary' : ''}`}
+              disabled={isNextDisabled()}
+              style={{ pointerEvents: 'auto', zIndex: 10000 }}
+            >
+              {step === 10 ? 'Launch Rizzly' : 'Continue'}
+            </button>
+          </div>
+        )}
       </div>
+
     </div>
   );
 }
