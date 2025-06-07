@@ -13,6 +13,7 @@ export interface ProfileAnalysisRequest {
   images: string[]; // base64 encoded images
   userMessage: string;
   onboardingData: any;
+  conversationHistory?: any[]; // chat history for context
 }
 
 export class AIService {
@@ -158,15 +159,20 @@ Remember: You're a fun, supportive dating wingman, not a formal assistant!`;
   // analyze profile with images and user context
   async analyzeProfile(request: ProfileAnalysisRequest): Promise<AIResponse> {
     try {
+      // build context from recent chat history
+      const recentChat = request.conversationHistory?.slice(-4).map(msg => 
+        `${msg.type === 'user' ? 'user' : 'you'}: ${msg.message}`
+      ).join('\n') || '';
+
       const analysisPrompt = `You are a witty, helpful dating copilot analyzing a dating profile. Here's the user's context:
 
 User's dating goals: ${request.onboardingData?.primaryGoal || 'not specified'}
 Communication style: ${request.onboardingData?.communicationStyle?.join(', ') || 'not specified'}
 Interests: ${request.onboardingData?.conversationTopics?.join(', ') || 'not specified'}
 
-User asked: "${request.userMessage}"
+${recentChat ? `Recent conversation:\n${recentChat}\n` : ''}User asked: "${request.userMessage}"
 
-Based on the profile photos, give a quick 2-3 sentence take. Write entirely in lowercase and be casual, honest, and helpful - like texting a friend. Keep the same chill, supportive tone as your other responses. Focus on whether they seem compatible and one good conversation starter.`;
+Based on the profile photos and your conversation context, give a quick 2-3 sentence take. Write entirely in lowercase and be casual, honest, and helpful - like texting a friend. Keep the same chill, supportive tone as your other responses. Reference previous conversation if relevant.`;
 
       // only use the last 5 images to avoid token limits
       const imagesToAnalyze = request.images.slice(-5);

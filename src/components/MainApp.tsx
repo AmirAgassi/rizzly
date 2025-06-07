@@ -247,7 +247,7 @@ function MainApp() {
         const downloadMessageId = Date.now(); // unique ID for this download
         const downloadMessage = {
           type: 'mascot',
-          message: 'downloading profile photos...',
+          message: 'checking their photos...',
           timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
           bufoFace: 'thinking',
           hasPhotoStack: true,
@@ -267,7 +267,8 @@ function MainApp() {
             const analysisResult = await window.electronAPI.aiAnalyzeProfile(
               downloadResult.images,
               originalMessage,
-              onboardingData
+              onboardingData,
+              chatHistory
             );
             
             if (analysisResult.success && analysisResult.response) {

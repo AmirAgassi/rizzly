@@ -415,7 +415,7 @@ ipcMain.handle('ai:status', async (event) => {
   return { isConnected: !!aiService };
 });
 
-ipcMain.handle('ai:analyze-profile', async (event, images: string[], userMessage: string, onboardingData: any) => {
+ipcMain.handle('ai:analyze-profile', async (event, images: string[], userMessage: string, onboardingData: any, conversationHistory: any[]) => {
   try {
     if (!aiService) {
       return { 
@@ -424,11 +424,12 @@ ipcMain.handle('ai:analyze-profile', async (event, images: string[], userMessage
       };
     }
 
-    console.log('Main process: Analyzing profile with', images.length, 'images');
+    console.log('Main process: Analyzing profile with', images.length, 'images and', conversationHistory?.length || 0, 'chat messages');
     const response = await aiService.analyzeProfile({
       images,
       userMessage,
-      onboardingData
+      onboardingData,
+      conversationHistory
     });
     
     console.log('Main process: Analysis complete, response length:', response.message.length);

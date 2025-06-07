@@ -9,7 +9,7 @@ export interface IElectronAPI {
   aiInitialize: (apiKey: string) => Promise<{ success: boolean; error?: string }>;
   aiChat: (userMessage: string, conversationHistory: any[]) => Promise<{ success: boolean; response?: any; error?: string; fallback?: any }>;
   aiStatus: () => Promise<{ isConnected: boolean }>;
-  aiAnalyzeProfile: (images: string[], userMessage: string, onboardingData: any) => Promise<{ success: boolean; response?: any; error?: string }>;
+  aiAnalyzeProfile: (images: string[], userMessage: string, onboardingData: any, conversationHistory: any[]) => Promise<{ success: boolean; response?: any; error?: string }>;
   // profile image download
   downloadProfileImages: () => Promise<{ success: boolean; images?: string[]; count?: number; error?: string }>;
   onDownloadProgress: (callback: (data: { imageCount: number; imageUrl?: string; imageBase64?: string; isComplete: boolean }) => void) => () => void;
