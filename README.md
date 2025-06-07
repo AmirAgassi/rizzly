@@ -22,53 +22,35 @@
 <img width="700" alt="image" align="center" src="https://github.com/user-attachments/assets/fe30a0c1-d374-4852-b56c-5ded6d989d3e" />
 </p>
 
-## what is rizzly?
+**rizzly is an ai-powered desktop app that helps you navigate dating apps with confidence.** if you've ever stared at someone's profile wondering what to say, or drafted a message that just didn't feel right, this is for you.
 
-rizzly is an ai-powered desktop app that helps you navigate dating apps with confidence. if you've ever stared at someone's profile wondering what to say, or drafted a message that just didn't feel right, rizzly is designed to help. 
+think of it as your personal dating wingman that analyzes profiles, crafts messages, and provides real-time feedback. it runs locally and integrates directly with dating apps through an embedded browser.
 
-think of it as your personal dating wingman - an ai assistant that analyzes profiles, crafts personalized messages, and provides real-time feedback to help you make better connections. it runs locally on your computer and integrates directly with dating apps through an embedded browser.
+### **how it works**
 
-## meet bufo, your dating companion
+rizzly learns your dating preferences through onboarding - your goals, communication style, and interests. then you just chat with bufo about profiles and messages.
 
-bufo is rizzly's mascot and emotional intelligence system. he reacts to conversations with over 100 different expressions and emotions, providing visual feedback on how your interactions are going. when you're doing well, he gets excited. when something needs work, his expressions let you know.
+> *"analyze her photos"* -> get profile insights  
+> *"write me an opener"* -> personalized first messages  
+> *"how should i rephrase this?"* -> message improvements  
 
-beyond being charming, bufo adapts to your communication style and dating goals, making the entire experience more engaging and less stressful than traditional dating app interfaces.
+**emergency intervention** prevents you from sending potentially problematic messages, acting as a safety net for your conversations.
 
-## how rizzly works
-
-when you first launch rizzly, it learns about your dating preferences through a personalized onboarding flow. it discovers your goals (serious relationships, casual dating, or exploration), understands your communication style (witty, flirty, intellectual, direct), and learns about your interests and conversation topics.
-
-once set up, you navigate to your preferred dating app within rizzly's browser and start chatting with bufo. ask him to "analyze her photos" for profile insights, request "write me an opener" for personalized first messages, or say "how should i rephrase this?" for message improvement suggestions.
-
-rizzly also includes an emergency intervention system that helps prevent potentially problematic messages from being sent, acting as a safety net for your dating conversations.
-
-## technical implementation
-
-rizzly is built with react and typescript, packaged as an electron desktop application. the ai functionality is powered by sambanova's llama 3.3 70b model, providing sophisticated natural language processing for dating-specific scenarios.
-
-the interface uses tailwindcss for styling, with webpack and electron-forge handling the build process. the app includes developer tools for advanced users, including automatic photo downloading, browser integration controls, and debugging capabilities.
-
-## getting started
-
-first, obtain a free api key from sambanova.ai. then clone the repository and install dependencies:
+### **get started**
 
 ```bash
-git clone https://github.com/yourusername/rizzly.git
-cd rizzly
-npm install 
-npm start
+# grab a free api key from sambanova.ai first
+git clone https://github.com/AmirAgassi/rizzly.git
+cd rizzly && npm install && npm start
 ```
-<img width="1255" alt="image" src="https://github.com/user-attachments/assets/0f991390-9e96-47ea-86c9-7866cb1a8ef4" />
 
-complete the onboarding process to set your preferences, add your api key in the settings, and begin receiving personalized dating assistance from bufo.
-
-## why rizzly exists
-
-dating apps can be challenging to navigate effectively. crafting engaging messages, interpreting profiles, and maintaining interesting conversations requires skills that don't come naturally to everyone. rizzly bridges this gap by providing ai-powered assistance that adapts to your personality and dating goals.
-
-the goal is to make dating apps less intimidating and more successful, while maintaining authenticity in your interactions.
+complete onboarding, add your api key, and start getting personalized dating assistance.
 
 ---
+
+### **why rizzly exists**
+
+dating apps can be challenging. crafting engaging messages and interpreting profiles requires skills that don't come naturally to everyone. rizzly bridges this gap with ai assistance that adapts to your personality, making dating apps less intimidating and more successful.
 
 <div align="center">
   <sub>built with care for better dating experiences</sub>
