@@ -90,3 +90,13 @@ typings/
 
 # Electron-Forge
 out/
+
+# svelte specific
+.svelte-kit
+build
+.env
+.env.*
+!/.env.example
+
+# misc
+*.iconset
