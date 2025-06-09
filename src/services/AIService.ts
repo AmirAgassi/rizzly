@@ -359,7 +359,7 @@ Response format: {"message": "your reaction", "emotion": "shocked/relieved/conce
       };
     }
   }
-c
+
   // generate completion message after writing
   async generateCompletionMessage(writtenMessage: string, userRequest: string, onboardingData?: any): Promise<AIResponse> {
     try {

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import Welcome from './Welcome';
 import FinalSetup from './FinalSetup';
+import { GoalQuestion } from './GoalQuestion';
+import { AssistanceLevelQuestion } from './AssistanceLevelQuestion';
 import './Onboarding.css';
 
 interface OnboardingFlowProps {
@@ -24,123 +26,9 @@ export interface OnboardingData {
 }
 
 // individual question components
-const GoalQuestion = ({ data, updateData, onNext, onBack }: any) => (
-  <div className="onboarding-content">
-    <h2>What's your primary goal?</h2>
-    <p className="subtitle">
-      Help us understand what you're looking for so we can customize your experience.
-    </p>
 
-    <div className="text-input-group">
-      <div className="onboarding-options">
-        <label>
-          <input 
-            type="radio" 
-            name="goal" 
-            value="serious-relationship" 
-            checked={data.primaryGoal === 'serious-relationship'} 
-            onChange={(e) => updateData({ primaryGoal: e.target.value })} 
-          />
-          <span className="option-icon">💍</span>
-          Finding a serious relationship
-        </label>
-        <label>
-          <input 
-            type="radio" 
-            name="goal" 
-            value="casual-dating" 
-            checked={data.primaryGoal === 'casual-dating'} 
-            onChange={(e) => updateData({ primaryGoal: e.target.value })} 
-          />
-          <span className="option-icon">😊</span>
-          Casual dating and meeting new people
-        </label>
-        <label>
-          <input 
-            type="radio" 
-            name="goal" 
-            value="hookups" 
-            checked={data.primaryGoal === 'hookups'} 
-            onChange={(e) => updateData({ primaryGoal: e.target.value })} 
-          />
-          <span className="option-icon">🔥</span>
-          Casual hookups and fun
-        </label>
-        <label>
-          <input 
-            type="radio" 
-            name="goal" 
-            value="exploring" 
-            checked={data.primaryGoal === 'exploring'} 
-            onChange={(e) => updateData({ primaryGoal: e.target.value })} 
-          />
-          <span className="option-icon">🌟</span>
-          Just exploring and having fun
-        </label>
-      </div>
-    </div>
 
-  </div>
-);
 
-const AssistanceLevelQuestion = ({ data, updateData }: any) => (
-  <div className="onboarding-content">
-    <h2>How can your dating copilot help?</h2>
-    <p className="subtitle">
-      Choose the level of assistance you'd like from your AI dating companion.
-    </p>
-
-    <div className="text-input-group">
-      <div className="onboarding-options single-column">
-        <label>
-          <input 
-            type="radio" 
-            name="assistanceLevel" 
-            value="write-messages" 
-            checked={data.assistanceLevel === 'write-messages'} 
-            onChange={(e) => updateData({ assistanceLevel: e.target.value })} 
-          />
-          <span className="option-icon">✍️</span>
-          Write messages for me (full automation)
-        </label>
-        <label>
-          <input 
-            type="radio" 
-            name="assistanceLevel" 
-            value="suggest-responses" 
-            checked={data.assistanceLevel === 'suggest-responses'} 
-            onChange={(e) => updateData({ assistanceLevel: e.target.value })} 
-          />
-          <span className="option-icon">💡</span>
-          Suggest what to say (coaching mode)
-        </label>
-        <label>
-          <input 
-            type="radio" 
-            name="assistanceLevel" 
-            value="review-messages" 
-            checked={data.assistanceLevel === 'review-messages'} 
-            onChange={(e) => updateData({ assistanceLevel: e.target.value })} 
-          />
-          <span className="option-icon">👀</span>
-          Review my messages (feedback mode)
-        </label>
-        <label>
-          <input 
-            type="radio" 
-            name="assistanceLevel" 
-            value="conversation-starters" 
-            checked={data.assistanceLevel === 'conversation-starters'} 
-            onChange={(e) => updateData({ assistanceLevel: e.target.value })} 
-          />
-          <span className="option-icon">🚀</span>
-          Just give me conversation starters
-        </label>
-      </div>
-    </div>
-
-  </div>
-);
 
 const CommunicationStyleQuestion = ({ data, updateData, onNext, onBack }: any) => {
   const handleStyleChange = (style: string) => {

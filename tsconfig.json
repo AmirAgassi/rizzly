@@ -12,8 +12,21 @@
     "forceConsistentCasingInFileNames": true,
     "outDir": ".dist",
     "resolveJsonModule": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@/renderer/*": ["src/renderer/*"],
+      "@/main/*": ["src/main/*"],
+      "@/shared/*": ["src/shared/*"],
+      "@/features/*": ["src/renderer/features/*"],
+      "@/hooks/*": ["src/renderer/hooks/*"],
+      "@/services/*": ["src/services/*"],
+      "@/stores/*": ["src/renderer/stores/*"],
+      "@/types/*": ["src/shared/types/*"]
+    },
+    "types": ["node"]
   },
   "include": ["src/**/*", "run-automation.js"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", ".dist", ".webpack", "**/*.test.ts", "**/*.test.tsx", "**/__tests__/**/*"]
 } 

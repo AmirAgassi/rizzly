@@ -126,9 +126,29 @@ ipcMain.on('onboarding-complete', () => {
               const onboardingData = await mainWindow.webContents.executeJavaScript(
                 `JSON.parse(localStorage.getItem('rizzly-preferences') || 'null')`
               );
-              const chatHistory = await mainWindow.webContents.executeJavaScript(
-                `JSON.parse(localStorage.getItem('rizzly-chat-history') || '[]')`
-              );
+              // handle both old format (array) and new Zustand persist format (object with state)
+              const chatHistory = await mainWindow.webContents.executeJavaScript(`
+                (() => {
+                  const stored = localStorage.getItem('rizzly-chat-history');
+                  if (!stored) return [];
+                  
+                  try {
+                    const parsed = JSON.parse(stored);
+                    // new Zustand format: { state: { messages: [...] }, version: 0 }
+                    if (parsed.state && Array.isArray(parsed.state.messages)) {
+                      return parsed.state.messages;
+                    }
+                    // old format: direct array
+                    if (Array.isArray(parsed)) {
+                      return parsed;
+                    }
+                    return [];
+                  } catch (error) {
+                    console.error('failed to parse chat history:', error);
+                    return [];
+                  }
+                })()
+              `);
 
               if (aiService) {
                 const emergencyResult = await aiService.detectEmergency(result.content, onboardingData, chatHistory);

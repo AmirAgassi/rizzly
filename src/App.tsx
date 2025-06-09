@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import MainApp from './components/MainApp';
-import OnboardingFlow from './components/Onboarding/OnboardingFlow';
+import MainApp from './renderer/components/MainApp';
+import { OnboardingFlow } from './renderer/features/onboarding';
 
 function App() {
   const [onboardingComplete, setOnboardingComplete] = useState(false);
@@ -11,9 +11,9 @@ function App() {
   };
 
   if (onboardingComplete) {
-    return <MainApp key="main-app" />;
+    return <MainApp />;
   } else {
-    return <OnboardingFlow key="onboarding" onComplete={handleOnboardingComplete} />;
+    return <OnboardingFlow onComplete={handleOnboardingComplete} />;
   }
 }
 

@@ -16,7 +16,7 @@ class BufoManager {
 
     try {
       // use webpack's require.context to load all files from bufopack
-      const context = (require as any).context('../bufopack/', false, /\.(png|gif)$/);
+      const context = (require as any).context('../../bufopack/', false, /\.(png|gif)$/);
       const bufoFiles = context.keys();
 
       // populate the bufo map
